@@ -2,9 +2,13 @@ function write(text) {
 	console.log(text);
 }
 
-// ------------------------------------------
-// Constructor
-// ------------------------------------------
+/** 
+ * Interface with Janus Gateway Video Room and WebRTC-streamer API
+ * @constructor
+ * @param {string} janusUrl - url of Janus Gateway
+ * @param {function} callback - callback to trig when state changes
+ * @param {string} srvurl - url of WebRTC-streamer
+*/
 function JanusVideoRoom (janusUrl, callback, srvurl) {	
 	this.janusUrl    = janusUrl;
 	this.callback    = callback || function() {};	
@@ -12,13 +16,33 @@ function JanusVideoRoom (janusUrl, callback, srvurl) {
 	this.connection  = [];
 }
 	
-// ------------------------------------------
-// Ask to connect an URL to a Janus Video Room user
-// ------------------------------------------
+/** 
+* Ask to publish a stream from WebRTC-streamer in a Janus Video Room user
+ * @param {string} janusroomid - id of the Janus Video Room to join
+ * @param {string} url - WebRTC stream to publish
+ * @param {string} name - name in  Janus Video Room
+*/
 JanusVideoRoom.prototype.join = function(janusroomid, url, name) {
 	// create a session
 	var createReq = {janus: "create", transaction: Math.random().toString() }
 	send(this.janusUrl, null, createReq, function(dataJson) { this.onCreateSession(dataJson, janusroomid, url, name) }, this.onError, this);		
+}
+
+/**
+* Ask to unpublish a stream from WebRTC-streamer in a Janus Video Room user
+ * @param {string} janusroomid - id of the Janus Video Room to join
+ * @param {string} url - WebRTC stream to publish
+ * @param {string} name - name in  Janus Video Room
+*/
+JanusVideoRoom.prototype.leave = function(janusroomid, url, name) {
+	var connection = this.connection[janusroomid + "_" + url + "_" + name];
+	if (connection) {
+		var sessionId = connection.sessionId;
+		var pluginid  = connection.pluginId;
+		
+		var msg = { "janus": "message", "body": {"request": "unpublish"}, "transaction": Math.random().toString() };		
+		send(this.janusUrl + "/" + sessionId + "/" + pluginid, null, msg,  null, this.onError, this);
+	}
 }
 
 
@@ -158,20 +182,6 @@ JanusVideoRoom.prototype.longpoll = function(dataJson, name, sessionId) {
 }
 
 	
-// ------------------------------------------
-// Ask to unpublish an URL to a Janus Video Room user
-// ------------------------------------------
-JanusVideoRoom.prototype.leave = function(janusroomid, url, name) {
-	var connection = this.connection[janusroomid + "_" + url + "_" + name];
-	if (connection) {
-		var sessionId = connection.sessionId;
-		var pluginid  = connection.pluginId;
-		
-		var msg = { "janus": "message", "body": {"request": "unpublish"}, "transaction": Math.random().toString() };		
-		send(this.janusUrl + "/" + sessionId + "/" + pluginid, null, msg,  null, this.onError, this);
-	}
-}
-
 
 
 
