@@ -171,8 +171,12 @@ JanusVideoRoom.prototype.onJoinRoomResult = function(dataJson,janusroomid,url,na
 		
 		var peerid = Math.random().toString();
 		
+		var createOfferUrl = this.srvurl + "/api/createOffer?peerid="+ peerid+"&url="+encodeURIComponent(url.video);
+		if (url.audio) {
+			createOfferUrl += "&audiourl="+encodeURIComponent(url.audio);
+		}
 		var bind = this;
-		request("GET" , this.srvurl + "/api/createOffer?peerid="+ peerid+"&url="+encodeURIComponent(url))
+		request("GET" , createOfferUrl)
 			.done( function (response) { 
 				if (response.statusCode === 200) {
 					bind.onCreateOffer(JSON.parse(response.body), name, sessionId, pluginid, peerid);
