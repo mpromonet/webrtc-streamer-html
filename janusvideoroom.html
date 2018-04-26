@@ -11,9 +11,10 @@
 .cell {
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 footer {
-    text-align: center; 
+  text-align: center; 
 }
 </style> 
 </head>
@@ -32,10 +33,13 @@ footer {
 	
 	// columns
 	var columnDefs = [
-	    { headerName: "Video"  , field: "video" , cellClass: "cell" ,  width:72,  
+	    { headerName: "Video"  , field: "video" , cellClass: "cell" ,  width:64,   
               cellRenderer: function(params) { 
 	            var videoElement = document.createElement('video');
                     videoElement.id = JSON.stringify(params.data.url);
+		    videoElement.className = "cell";
+		    videoElement.width = 128;
+		    videoElement.height = 96;
 		    videoElement.addEventListener('click', function() {
 		         window.open(webrtcConfig.url + "/webrtcstreamer.html?video=" + encodeURIComponent(params.data.url.video) + "&audio=" + encodeURIComponent(params.data.url.audio));
                     });
@@ -73,10 +77,10 @@ footer {
 					janus = new JanusVideoRoom(document.querySelector('#janusUrl').value, webrtcConfig.url);
 					janus.subscribeEvents(clientCallBack);
 				}
-				janus.join(parseInt(params.data.roomid), params.data.url, params.data.url);
+				janus.join(parseInt(params.data.roomid), params.data.url, JSON.stringify(params.data.url));
 				
 			} else {
-				janus.leave(parseInt(params.data.roomid), params.data.url, params.data.url);
+				janus.leave(parseInt(params.data.roomid), params.data.url, JSON.stringify(params.data.url));
 			}
 		});
 
@@ -102,7 +106,7 @@ footer {
 		var updatedNodes = [];
 		gridOptions.api.forEachNode( function(node) {
 			var data = node.data;
-			if (data.url === name) {
+			if (JSON.stringify(data.url) === name) {
 			    data.status = status;
 			    if (status === "up") {
 				data.action = "leave";
