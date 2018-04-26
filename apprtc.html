@@ -7,9 +7,33 @@
 	<input type="button" value="disconnect" onclick="disconnect()" />
 </body>
 <script src="libs/request.min.js"></script>
-<script src="sendrequest.js" ></script>
 <script src="apprtc.json" ></script>
 <script>
+	function sendRequest(request,method,headers,data,onSuccess,onFailure,scope) {
+
+		console.log("HTTP call "+ method);
+		var verb = "GET";
+		if (data) {
+			verb = "POST";
+			data = JSON.stringify(data);
+		}
+		request(verb , method,
+			{	
+				body: data,
+				headers: headers
+			}).done( function (response) { 
+				if (response.statusCode === 200) {
+					if (onSuccess) {
+						onSuccess.call(scope,JSON.parse(response.body));
+					}
+				}
+				else if (onFailure) {
+					onFailure.call(scope,response.statusCode);
+				}
+			}
+		);
+	}
+
 	// set default value
 	document.querySelector('#server').value  = apprtcConfig.url;
 	document.querySelector('#room').value = apprtcConfig.roomId;
