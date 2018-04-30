@@ -5,6 +5,7 @@
 <script src="libs/sdp-jingle-json.bundle.min.js"></script>
 <script>
 	var peerid = "test";
+	var webrtcStream = "screen://"
 
 	function write(text) {
 		var textNode = document.createElement("li");
@@ -17,27 +18,22 @@
 	}
 	
 	var client = null;
+	var candidates = null;
 	
-	function onCreateOffer(sdp) {
+	function onCreateOffer(iq,sdp) {
 		var json = SJJ.toIncomingJSONOffer(sdp.sdp);
 		write("onCreateOffer:" +  JSON.stringify(json))
 		
-		var serverName = document.querySelector('#xmppServer').value;
-		var userName = document.querySelector('#xmppUser').value;	
-		var roomName = document.querySelector('#xmppRoom').value;
-		var muc = "conference." + serverName;
-		var roomUrl = roomName + "@" + muc;
-		
-		client.jingle.process({ 
-			    from: roomUrl + "/" + userName,
-			    type: 'set',
-			    jingle: {
-				action: 'session-initiate',
-				initiator: roomUrl + "/" + userName,
-				contents: json.contents
-			    }		
+		client.sendIq({ type: "set", 
+				from: iq.to,
+				to: iq.from,
+				jingle:{
+					action:"session-accept",
+					sid:iq.jingle.sid,
+					contents:json.contents
+				}
 		});
-				
+		
 	}
 	
 	function onReceiveCandidate(candidate) {
@@ -64,9 +60,8 @@
 		var serverName = document.querySelector('#xmppServer').value;
 		var userName = document.querySelector('#xmppUser').value;	
 		var roomName = document.querySelector('#xmppRoom').value;
-		var webrtcStream = "rtsp://217.17.220.110/axis-media/media.amp"
-		var muc = "conference." + serverName;
-		var roomUrl = roomName + "@" + muc;
+		var mucUrl = "conference." + serverName;
+		var roomUrl = roomName + "@" + mucUrl;
 	
 		client = XMPP.createClient({
 		  jid: roomName + "@" + serverName,
@@ -77,54 +72,33 @@
 		client.on('session:started', () => {
 			write("session:started")			
 			
-	    		client.joinRoom(roomUrl, userName, {status:"available",nick:userName});				
+			write("caps:" + JSON.stringify(client.getCurrentCaps()));			
 			
-			client.getDiscoInfo(roomUrl,'', (err, data) => {
-				write("err:"+ JSON.stringify(err) + " info:"  + JSON.stringify(data))
-			});
+			client.getDiscoInfo(serverName,'', (err, data) => { write("info:"  + JSON.stringify(data)) });
+			client.getDiscoInfo(mucUrl,'', (err, data) => { write("info:"  + JSON.stringify(data)) });
+			client.getDiscoInfo(roomUrl,'', (err, data) => { write("info:"  + JSON.stringify(data)) });
+			
+			client.getDiscoItems(serverName,'', (err, data) => { write("item:"  + JSON.stringify(data)) });
+			client.getDiscoItems(mucUrl,'', (err, data) => { write("item:"  + JSON.stringify(data)) });
+			client.getDiscoItems(roomUrl,'', (err, data) => { write("item:"  + JSON.stringify(data)) });
+			
+			client.joinRoom(roomUrl, userName, {status:"available",nick:userName});							
 		} );
-		
-		client.on('roster:update', (data) => {write("roster:update:" + JSON.stringify(data))} )		
-		
-		client.on('nick', (data) => {write("nick:" + JSON.stringify(data))} )
-		
-		client.on('message', (data) => {write("message:" + JSON.stringify(data))} )
-		
-		client.on('stanza', (data) => {write("stanza:" + JSON.stringify(data))} )
 				
-		client.on('jingle:created', () => {write("jingle:created")} )
-		client.on('jingle:incoming', (session) => {
-			write("jingle:incoming: peer:" + session.peer + " peerID:" + session.peerID + " sid:" + session.sid)
-			session.accept();			
-		} )
-		client.on('jingle:outgoing', () => {write("jingle:outgoing")} )
-		client.on('jingle:accepted', () => {write("jingle:accepted")} )
-		client.on('jingle:terminated', () => {write("jingle:terminated")} )
-		client.on('jingle:ringing', () => {write("jingle:ringing")} )
-		client.on('jingle:remotestream:added', function (session) { 
-			write("jingle:remotestream:added peer:" + session.peer + " peerID:" + session.peerID + " sid:" + session.sid); 
-		});
-
-		client.on('muc:available', function (pres) { write("muc:available from:" + pres.from); });
+//		client.on('message', (data) => {write("message:" + JSON.stringify(data))} )		
+//		client.on('stanza', (data) => {write("stanza:" + JSON.stringify(data))} )
+				
 		client.on('muc:leave', function (pres) { write("muc:leave from:" + pres.from); });
 		client.on('muc:join', function (pres) {
 		    write("muc:join from:" + pres.from + " to:" + pres.to)	
 
+		    write("caps:" + JSON.stringify(client.updateCaps()));			
+
 		    if (pres.from.resource === userName) {
 			write("user joined");
 
-			client.sendMessage({ to: roomUrl, type:"groupchat", body:"Hello!" });	
+//			client.sendMessage({ to: roomUrl, type:"groupchat", body:"Hello!" });	
 						
-			var method = "/api/createOffer?peerid="+ peerid+"&url="+encodeURIComponent(webrtcStream)+"&options="+encodeURIComponent("rtptransport=tcp");
-			request("GET" , method).done( function (response) { 
-					if (response.statusCode === 200) {
-						onCreateOffer(JSON.parse(response.body));
-					}
-					else if (onFailure) {
-						onError(response.statusCode);
-					}
-				}
-			);
 		    }
 		});
 
@@ -132,38 +106,90 @@
 		    write("presence from:" + pres.from + " type:" + pres.type)
 		});
 		
-		client.on('iq', function(iq) {
+		client.on('iq', function(iq) {	
 			write("iq:" + JSON.stringify(iq));
-			if (iq.jingle && iq.jingle.action === "session-accept") {
-				var serverName = document.querySelector('#xmppServer').value;
-				var userName = document.querySelector('#xmppUser').value;	
-				var roomName = document.querySelector('#xmppRoom').value;
-				var muc = "conference." + serverName;
-				var roomUrl = roomName + "@" + muc;
-		
-				if (iq.from == roomUrl + "/" + userName) {
-					var sdp = SJJ.toIncomingSDPAnswer(iq.jingle.contents);
-					write("============sdp:" + sdp);
-					
-					var method = "/api/setAnswer?peerid="+ peerid;
-					
-					request("POST" , method, { body: JSON.stringify(sdp) }).done( function (response) { 
-							if (response.statusCode === 200) {
-								onSetAnswer(response.body);
-							}
-							else if (onFailure) {
-								onError(response.statusCode);
-							}
-						}
-					);					
-				}
-				
+			
+			if (iq.jingle && iq.jingle.action === "source-add") {
 				client.sendIq( {type:"result",
 								id: iq.id,
 								from: iq.to,
 								to: iq.from,
 							});
+
+				// Hack to allow to parse json without transport
+				iq.jingle.contents.forEach(function (content) {
+					if (!content.transport) {
+						content.transport = {candidates: []};
+					}
+				});
+				
+				var sdp = SJJ.toIncomingSDPAnswer(iq.jingle);
+				write("============sdp:" + sdp);
+
+
+				var method = "/api/setAnswer?peerid="+ peerid;
+				
+				request("POST" , method, { body: JSON.stringify(sdp) }).done( function (response) { 
+						if (response.statusCode === 200) {
+							onSetAnswer(response.body);
+						}
+						else if (onFailure) {
+							onError(response.statusCode);
+						}
+					}
+				);					
+								
 			}
+			
+			if (iq.jingle && iq.jingle.action === "transport-info") {
+				client.sendIq( {type:"result",
+					id: iq.id,
+					from: iq.to,
+					to: iq.from,
+				});
+
+				iq.jingle.contents.forEach(function (content) {
+					content.transport.candidates.forEach(function (candidate) {
+						var sdp = SJJ.toCandidateSDP(candidate);
+						sdp = sdp.replace("a=","");
+						write("============sdp:" + sdp);
+						var candidate = { candidate:sdp, sdpMid:0, sdpMLineIndex:0 }
+						
+/*							var method = "/api/addIceCandidate?peerid="+ peerid;
+						request("POST" , method, { body: JSON.stringify(candidate) }).done( function (response) { 
+								if (response.statusCode === 200) {
+									onSetAnswer(response.body);
+								}
+								else if (onFailure) {
+									onError(response.statusCode);
+								}
+							}
+						);*/					
+					});
+				});
+				
+			}
+			
+			if (iq.jingle && iq.jingle.action === "session-initiate") {
+			
+					client.sendIq( {type:"result",
+									id: iq.id,
+									from: iq.to,
+									to: iq.from,
+								});
+
+					var method = "/api/createOffer?peerid="+ peerid+"&url="+encodeURIComponent(webrtcStream)+"&options="+encodeURIComponent("rtptransport=tcp");
+					request("GET" , method).done( function (response) { 
+							if (response.statusCode === 200) {
+								onCreateOffer(iq, JSON.parse(response.body));
+							}
+							else if (onFailure) {
+								onError(response.statusCode);
+							}
+						}
+					);								
+			}			
+			
 		});
 
 		client.connect();			
@@ -189,7 +215,7 @@
 </script>
 </head>
 <body> 
-	XMPP Url:<input id="xmppServer" type="text" size="50" value="jitsi.example.com" /> 
+	XMPP Url:<input id="xmppServer" type="text" size="50" value="jitsi.ubuntu.com" /> 
 	User id:<input id="xmppUser" type="text" value="user" />
 	Room id:<input id="xmppRoom" type="text" value="testroom" />
 	<input type="button" value="connect" onclick="connect()" />
