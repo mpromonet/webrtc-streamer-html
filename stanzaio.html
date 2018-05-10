@@ -14,15 +14,14 @@
 	}
 	
 	function onError (error) {
-		write("onError:" + error)
+		write("############onError:" + error)
 	}
 	
 	var client = null;
 	var jid = null;
 
 	function onCall(iq, data) {
-		var json = SJJ.toIncomingJSONAnswer(data.sdp);
-		
+		var json = SJJ.toIncomingJSONAnswer(data.sdp);		
 		client.sendIq({ type: "set", 
 				from: iq.to,
 				to: iq.from,
@@ -31,12 +30,49 @@
 					sid:iq.jingle.sid,
 					contents:json.contents
 				}
+		}).then(function(result) {
+			write("============session-accept ok result:" +  JSON.stringify(result));
+				
+			var method = "/api/getIceCandidate?peerid="+ peerid;
+			request("GET" , method).done( function (response) { 
+					if (response.statusCode === 200) {
+						onReceiveCandidate(iq,JSON.parse(response.body));
+					}
+					else {
+						onError(response.statusCode);
+					}
+				}
+			);					
+		}).catch(function(result) {
+			write("############session-accept error result:" +  JSON.stringify(result));
 		});
 	}
 
 	
-	function onReceiveCandidate(candidate) {
-		write("============candidate:" +  JSON.stringify(candidate));
+	function onReceiveCandidate(iq, candidateList) {
+		write("============candidateList:" +  JSON.stringify(candidateList));
+		
+		candidateList.forEach(function (candidate) {
+			var json = SJJ.toCandidateJSON(candidate.candidate);
+			write("============candidate:" +  JSON.stringify(json));
+			iq.jingle.contents.transport.candidates.push(json);
+		});
+		
+		client.sendIq({ type: "set", 
+				from: iq.to,
+				to: iq.from,
+				jingle:{
+					action:"transport-info",
+					sid:iq.jingle.sid,
+					contents:{
+						transport:iq.jingle.contents.transport
+					}
+		}}).then(function(result) {
+			write("============transport-info ok result:" +  JSON.stringify(result));		
+		}).catch(function(result) {
+			write("############transport-info error result:" +  JSON.stringify(result));
+		});
+;
 	}
 	
 	function connect() {
@@ -115,6 +151,7 @@
 						}
 					}
 				);
+		
 			}			
 
 
@@ -123,7 +160,7 @@
 				iq.jingle.contents.forEach(function (content) {
 					content.transport.candidates.forEach(function (candidate) {
 						var sdp = SJJ.toCandidateSDP(candidate);
-						sdp = sdp.replace("a=","");
+						sdp = sdp.replace("a=candidate","candidate");
 						write("============sdp:" + sdp);
 						var candidate = { candidate:sdp, sdpMid:content.name, sdpMLineIndex:0 }
 						
@@ -138,7 +175,8 @@
 							}
 						);				
 					});
-				});		
+				});	
+				
 			}			
 
 		});
