@@ -4,7 +4,7 @@
 <script src="libs/stanzaio.bundle.js"></script>
 <script src="libs/sdp-jingle-json.bundle.js"></script>
 <script>
-	var peerid = "test";
+	var peerid = Math.random();
 	var webrtcStream = "screen://"
 
 	function write(text) {
@@ -18,9 +18,32 @@
 	}
 	
 	var client = null;
-	var jid = null;
+	var sid = null;
 
 	function onCall(iq, data) {
+	
+		// send ICE candidate to webrtc-streamer
+		iq.jingle.contents.forEach(function (content) {
+			content.transport.candidates.forEach(function (candidate) {
+				var sdp = SJJ.toCandidateSDP(candidate);
+				sdp = sdp.replace("a=candidate","candidate");
+				write("============sdp:" + sdp);
+				var candidate = { candidate:sdp, sdpMid:content.name, sdpMLineIndex:0 }
+				
+				var method = "/api/addIceCandidate?peerid="+ peerid;
+				request("POST" , method, { body: JSON.stringify(candidate) }).done( function (response) { 
+						if (response.statusCode === 200) {
+							write("method:"+method+ " answer:" +response.body);
+						}
+						else {
+							onError(response.statusCode);
+						}
+					}
+				);				
+			});
+		});	
+				
+		// send WebRTC answer to XMPP server
 		var json = SJJ.toIncomingJSONAnswer(data.sdp);		
 		client.sendIq({ type: "set", 
 				from: iq.to,
@@ -28,10 +51,12 @@
 				jingle:{
 					action:"session-accept",
 					sid:iq.jingle.sid,
+					responder:iq.to,
 					contents:json.contents
 				}
 		}).then(function(result) {
-			write("============session-accept ok result:" +  JSON.stringify(result));
+			sid = iq.jingle.sid;
+			write("============session-accept ok sid:" +  sid);
 				
 			var method = "/api/getIceCandidate?peerid="+ peerid;
 			request("GET" , method).done( function (response) { 
@@ -58,6 +83,7 @@
 			iq.jingle.contents.transport.candidates.push(json);
 		});
 		
+		// send webrtc-streamer candidate to XMPP server
 		client.sendIq({ type: "set", 
 				from: iq.to,
 				to: iq.from,
@@ -88,11 +114,10 @@
 		  transports: ['bosh']
 		});
 		
-		client.on('session:started', (jsessionid) => {
-			jid = jsessionid;
+		client.on('session:started', (jid) => {
 			write("session:started: jid:" + jid)			
 
-			write("caps:" + JSON.stringify(client.getCurrentCaps()));			
+			write("caps:" + JSON.stringify(client.updateCaps()));			
 			
 			client.getDiscoInfo(serverName,'', (err, data) => { write("info:"  + JSON.stringify(data)) });
 			client.getDiscoInfo(mucUrl,'', (err, data) => { write("info:"  + JSON.stringify(data)) });
@@ -110,78 +135,55 @@
 				
 		client.on('muc:leave', function (pres) { write("muc:leave from:" + pres.from); });
 		client.on('muc:join', function (pres) {
-			write("muc:join from:" + pres.from + " to:" + pres.to)	
-
-			write("caps:" + JSON.stringify(client.updateCaps()));			
+			write("muc:join from:" + pres.from);		
 
 			if (pres.from.resource === userName) {
 				write("user joined");
 
-	//			client.sendMessage({ to: roomUrl, type:"groupchat", body:"Hello!" });	
+//				client.sendMessage({ to: roomUrl, type:"groupchat", body:"Hello!" });	
 			}
 								
 		});
 
 		client.on('presence', function (pres) {
 		    write("presence from:" + pres.from + " type:" + pres.type)
-		    write("presence:" + JSON.stringify(pres))
 		});
 		
 		client.on('iq', function(iq) {	
 			write("iq:from:" + iq.from + " to:"+ iq.to + " " + JSON.stringify(iq));
 			
-			if (iq.jingle && iq.jingle.action === "session-initiate" && iq.jingle.contents) {
-			
-				client.sendIq( {type:"result",
-									id: iq.id,
-									from: iq.to,
-									to: iq.from,
-								}); 
+			if ( iq.jingle && (iq.jingle.action === "session-initiate") && (iq.jingle.initiator.indexOf("focus@") === 0) ) {
+				if (iq.jingle.contents && iq.jingle.contents.length && iq.jingle.contents[0].creator === "initiator") {						
 
-				var sdp = SJJ.toIncomingSDPOffer(iq.jingle);
-				write("offer============sdp:" + sdp);							
-				
-				var method = "/api/call?peerid="+ peerid+"&url="+encodeURIComponent(webrtcStream)+"&options="+encodeURIComponent("rtptransport=tcp");
-				request("POST" , method, {body:JSON.stringify({type:"offer",sdp})}).done( function (response) { 
-						if (response.statusCode === 200) {
-							onCall(iq,JSON.parse(response.body));
-						}
-						else {
-							onError(response.statusCode);
-						}
-					}
-				);
-		
-			}			
-
-
-			if (iq.jingle && iq.jingle.action === "transport-info" && iq.jingle.contents) {
-			
-				iq.jingle.contents.forEach(function (content) {
-					content.transport.candidates.forEach(function (candidate) {
-						var sdp = SJJ.toCandidateSDP(candidate);
-						sdp = sdp.replace("a=candidate","candidate");
-						write("============sdp:" + sdp);
-						var candidate = { candidate:sdp, sdpMid:content.name, sdpMLineIndex:0 }
-						
-						var method = "/api/addIceCandidate?peerid="+ peerid;
-						request("POST" , method, { body: JSON.stringify(candidate) }).done( function (response) { 
-								if (response.statusCode === 200) {
-									write("method:"+method+ " answer:" +response.body);
-								}
-								else {
-									onError(response.statusCode);
-								}
+					var sdp = SJJ.toIncomingSDPOffer(iq.jingle);
+					write("offer============sdp:" + sdp);							
+					
+					var method = "/api/call?peerid="+ peerid+"&url="+encodeURIComponent(webrtcStream)+"&options="+encodeURIComponent("rtptransport=tcp");
+					request("POST" , method, {body:JSON.stringify({type:"offer",sdp})}).done( function (response) { 
+							if (response.statusCode === 200) {
+								onCall(iq,JSON.parse(response.body));
 							}
-						);				
-					});
-				});	
-				
+							else {
+								onError(response.statusCode);
+							}
+						}
+					);
+				} else {
+					client.sendIq({ type: "set", 
+						from: iq.to,
+						to: iq.from,
+						jingle:{
+							action:"session-terminate",
+							sid:iq.jingle.sid
+						}
+					})					
+				}
 			}			
 
 		});
 
 		client.disco.addIdentity({ category: 'client', type: 'phone' });
+//		client.disco.addFeature("urn:ietf:rfc:5761") // rtcp-mux
 
 		client.connect();			
 				
@@ -195,6 +197,18 @@
 		var roomUrl = roomName + "@" + muc;
 
 		if (client) {
+			if (sid) {
+				client.sendIq({ type: "set", 
+					from: iq.to,
+					to: iq.from,
+					jingle:{
+						action:"session-terminate",
+						sid:sid
+					}
+				})	
+				sid = null;
+			}				
+		
 			client.leaveRoom(roomUrl, userName);
 			client = null;
 		}
