@@ -1,0 +1,240 @@
+<html>
+<head>
+<script src="libs/request.min.js"></script>
+<script src="libs/stanzaio.bundle.js"></script>
+<script src="libs/sdp-jingle-json.bundle.js"></script>
+<script>
+	var peerid = Math.random();
+	var webrtcStream = "screen://"
+
+	function write(text) {
+		var textNode = document.createElement("li");
+		textNode.textContent = text;
+		document.body.appendChild(textNode);
+	}
+	
+	function onError (error) {
+		write("############onError:" + error)
+	}
+	
+	var client = null;
+	var sid = null;
+
+	function onCall(iq, data) {
+	
+		// send ICE candidate to webrtc-streamer
+		iq.jingle.contents.forEach(function (content) {
+			content.transport.candidates.forEach(function (candidate) {
+				var sdp = SJJ.toCandidateSDP(candidate);
+				sdp = sdp.replace("a=candidate","candidate");
+				write("============sdp:" + sdp);
+				var candidate = { candidate:sdp, sdpMid:content.name, sdpMLineIndex:0 }
+				
+				var method = "/api/addIceCandidate?peerid="+ peerid;
+				request("POST" , method, { body: JSON.stringify(candidate) }).done( function (response) { 
+						if (response.statusCode === 200) {
+							write("method:"+method+ " answer:" +response.body);
+						}
+						else {
+							onError(response.statusCode);
+						}
+					}
+				);				
+			});
+		});	
+				
+		// send WebRTC answer to XMPP server
+		var json = SJJ.toIncomingJSONAnswer(data.sdp);		
+		client.sendIq({ type: "set", 
+				from: iq.to,
+				to: iq.from,
+				jingle:{
+					action:"session-accept",
+					sid:iq.jingle.sid,
+					responder:iq.to,
+					contents:json.contents
+				}
+		}).then(function(result) {
+			sid = iq.jingle.sid;
+			write("============session-accept ok sid:" +  sid);
+				
+			var method = "/api/getIceCandidate?peerid="+ peerid;
+			request("GET" , method).done( function (response) { 
+					if (response.statusCode === 200) {
+						onReceiveCandidate(iq,JSON.parse(response.body));
+					}
+					else {
+						onError(response.statusCode);
+					}
+				}
+			);					
+		}).catch(function(result) {
+			write("############session-accept error result:" +  JSON.stringify(result));
+		});
+	}
+
+	
+	function onReceiveCandidate(iq, candidateList) {
+		write("============candidateList:" +  JSON.stringify(candidateList));
+		
+		candidateList.forEach(function (candidate) {
+			var json = SJJ.toCandidateJSON(candidate.candidate);
+			write("============candidate:" +  JSON.stringify(json));
+			iq.jingle.contents.transport.candidates.push(json);
+		});
+		
+		// send webrtc-streamer candidate to XMPP server
+		client.sendIq({ type: "set", 
+				from: iq.to,
+				to: iq.from,
+				jingle:{
+					action:"transport-info",
+					sid:iq.jingle.sid,
+					contents:{
+						transport:iq.jingle.contents.transport
+					}
+		}}).then(function(result) {
+			write("============transport-info ok result:" +  JSON.stringify(result));		
+		}).catch(function(result) {
+			write("############transport-info error result:" +  JSON.stringify(result));
+		});
+;
+	}
+	
+	function connect() {
+		var serverName = document.querySelector('#xmppServer').value;
+		var userName = document.querySelector('#xmppUser').value;	
+		var roomName = document.querySelector('#xmppRoom').value;
+		var mucUrl = "conference." + serverName;
+		var roomUrl = roomName + "@" + mucUrl;
+	
+		client = XMPP.createClient({
+		  jid: roomName + "@" + serverName,
+		  boshURL: location.protocol+ "//" + serverName + "/http-bind",
+		  transports: ['bosh']
+		});
+		
+		client.on('session:started', (jid) => {
+			write("session:started: jid:" + jid)			
+
+			write("caps:" + JSON.stringify(client.updateCaps()));			
+			
+			client.getDiscoInfo(serverName,'', (err, data) => { write("info:"  + JSON.stringify(data)) });
+			client.getDiscoInfo(mucUrl,'', (err, data) => { write("info:"  + JSON.stringify(data)) });
+			client.getDiscoInfo(roomUrl,'', (err, data) => { write("info:"  + JSON.stringify(data)) });
+			
+			client.getDiscoItems(serverName,'', (err, data) => { write("item:"  + JSON.stringify(data)) });
+			client.getDiscoItems(mucUrl,'', (err, data) => { write("item:"  + JSON.stringify(data)) });
+			client.getDiscoItems(roomUrl,'', (err, data) => { write("item:"  + JSON.stringify(data)) });
+
+			client.joinRoom(roomUrl, userName, {type:"available",nick:userName});				
+		} );
+				
+//		client.on('message', (data) => {write("message:" + JSON.stringify(data))} )		
+//		client.on('stanza', (data) => {write("stanza:" + JSON.stringify(data))} )
+				
+		client.on('muc:leave', function (pres) { write("muc:leave from:" + pres.from); });
+		client.on('muc:join', function (pres) {
+			write("muc:join from:" + pres.from);		
+
+			if (pres.from.resource === userName) {
+				write("user joined");
+
+//				client.sendMessage({ to: roomUrl, type:"groupchat", body:"Hello!" });	
+			}
+								
+		});
+
+		client.on('presence', function (pres) {
+		    write("presence from:" + pres.from + " type:" + pres.type)
+		});
+		
+		client.on('iq', function(iq) {	
+			write("iq:from:" + iq.from + " to:"+ iq.to + " " + JSON.stringify(iq));
+			
+			if ( iq.jingle && (iq.jingle.action === "session-initiate") && (iq.jingle.initiator.indexOf("focus@") === 0) ) {
+				if (iq.jingle.contents && iq.jingle.contents.length && iq.jingle.contents[0].creator === "initiator") {						
+
+					var sdp = SJJ.toIncomingSDPOffer(iq.jingle);
+					write("offer============sdp:" + sdp);							
+					
+					var method = "/api/call?peerid="+ peerid+"&url="+encodeURIComponent(webrtcStream)+"&options="+encodeURIComponent("rtptransport=tcp");
+					request("POST" , method, {body:JSON.stringify({type:"offer",sdp})}).done( function (response) { 
+							if (response.statusCode === 200) {
+								onCall(iq,JSON.parse(response.body));
+							}
+							else {
+								onError(response.statusCode);
+							}
+						}
+					);
+				} else {
+					client.sendIq({ type: "set", 
+						from: iq.to,
+						to: iq.from,
+						jingle:{
+							action:"session-terminate",
+							sid:iq.jingle.sid
+						}
+					})					
+				}
+			}			
+
+		});
+
+		client.disco.addIdentity({ category: 'client', type: 'phone' });
+//		client.disco.addFeature("urn:ietf:rfc:5761") // rtcp-mux
+
+		client.connect();			
+				
+	}
+	
+	function disconnect() {
+		var serverName = document.querySelector('#xmppServer').value;
+		var userName = document.querySelector('#xmppUser').value;	
+		var roomName = document.querySelector('#xmppRoom').value;
+		var muc = "conference." + serverName;
+		var roomUrl = roomName + "@" + muc;
+
+		if (client) {
+			if (sid) {
+				client.sendIq({ type: "set", 
+					from: iq.to,
+					to: iq.from,
+					jingle:{
+						action:"session-terminate",
+						sid:sid
+					}
+				})	
+				sid = null;
+			}				
+		
+			client.leaveRoom(roomUrl, userName);
+			client = null;
+		}
+		
+		var method = "/api/hangup?peerid="+ peerid;
+		request("GET" , method).done( function (response) { 
+				if (response.statusCode === 200) {
+					write("method:"+method+ " answer:" +response.body);
+				}
+				else {
+					onError(response.statusCode);
+				}
+			}
+		);		
+	}
+	
+	window.onbeforeunload = function() { 
+		disconnect();
+	};		
+</script>
+</head>
+<body> 
+	XMPP Url:<input id="xmppServer" type="text" size="50" value="jitsi.ubuntu.com" /> 
+	User id:<input id="xmppUser" type="text" value="user" />
+	Room id:<input id="xmppRoom" type="text" value="testroom" />
+	<input type="button" value="connect" onclick="connect()" />
+	<input type="button" value="disconnect" onclick="disconnect()" />
+</body>
+</html>
