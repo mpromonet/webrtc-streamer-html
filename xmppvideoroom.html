@@ -7,9 +7,18 @@
 	var peerid = Math.random();
 	var webrtcStream = "screen://"
 
-	function write(text) {
+	function write(text, value) {
 		var textNode = document.createElement("li");
 		textNode.textContent = text;
+		if (value instanceof Array) {
+			var arrayNode = document.createElement("ul");
+			value.forEach((itemText) => {
+				var item = document.createElement("li");
+				item.textContent = JSON.stringify(itemText);		
+				arrayNode.appendChild(item);				
+			})
+			textNode.appendChild(arrayNode);
+		}
 		document.body.appendChild(textNode);
 	}
 	
@@ -117,16 +126,17 @@
 		client.on('session:started', (jid) => {
 			write("session:started: jid:" + jid)			
 
-			write("caps:" + JSON.stringify(client.updateCaps()));			
+			var caps = client.updateCaps();
+			write("caps features:", caps.discoInfo.features)		
 			
-			client.getDiscoInfo(serverName,'', (err, data) => { write("info:"  + JSON.stringify(data)) });
-			client.getDiscoInfo(mucUrl,'', (err, data) => { write("info:"  + JSON.stringify(data)) });
-			client.getDiscoInfo(roomUrl,'', (err, data) => { write("info:"  + JSON.stringify(data)) });
+			client.getDiscoInfo(serverName,'', (err, data) => { write(serverName +" info:", data.discoInfo.features) });
+			client.getDiscoInfo(mucUrl,'', (err, data) => { write(mucUrl +" info:", data.discoInfo.features) });
+			client.getDiscoInfo(roomUrl,'', (err, data) => { write(roomUrl +" info:", data.discoInfo.features) });
 			
-			client.getDiscoItems(serverName,'', (err, data) => { write("item:"  + JSON.stringify(data)) });
-			client.getDiscoItems(mucUrl,'', (err, data) => { write("item:"  + JSON.stringify(data)) });
-			client.getDiscoItems(roomUrl,'', (err, data) => { write("item:"  + JSON.stringify(data)) });
-
+			client.getDiscoItems(serverName,'', (err, data) => { write(serverName +" item:", data.discoItems.items) });
+			client.getDiscoItems(mucUrl,'', (err, data) => { write(mucUrl +" item:", data.discoItems.items) });
+			client.getDiscoItems(roomUrl,'', (err, data) => { write(roomUrl + " item:", data.discoItems.items) });
+			
 			client.joinRoom(roomUrl, userName, {type:"available",nick:userName});				
 		} );
 				
@@ -139,7 +149,6 @@
 
 			if (pres.from.resource === userName) {
 				write("user joined");
-
 //				client.sendMessage({ to: roomUrl, type:"groupchat", body:"Hello!" });	
 			}
 								
@@ -158,7 +167,7 @@
 					var sdp = SJJ.toIncomingSDPOffer(iq.jingle);
 					write("offer============sdp:" + sdp);							
 					
-					var method = "/api/call?peerid="+ peerid+"&url="+encodeURIComponent(webrtcStream)+"&options="+encodeURIComponent("rtptransport=tcp");
+					var method = "/api/call?peerid="+ peerid+"&url="+encodeURIComponent(webrtcStream)+"&audiourl=none"+"&options="+encodeURIComponent("rtptransport=tcp");
 					request("POST" , method, {body:JSON.stringify({type:"offer",sdp})}).done( function (response) { 
 							if (response.statusCode === 200) {
 								onCall(iq,JSON.parse(response.body));
@@ -183,7 +192,7 @@
 		});
 
 		client.disco.addIdentity({ category: 'client', type: 'phone' });
-//		client.disco.addFeature("urn:ietf:rfc:5761") // rtcp-mux
+//		client.disco.addFeature("urn:ietf:rfc:5761") // rtcp-mux	
 
 		client.connect();			
 				
