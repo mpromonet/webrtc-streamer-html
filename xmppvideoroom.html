@@ -3,7 +3,22 @@
 <script src="libs/request.min.js"></script>
 <script src="libs/stanzaio.bundle.js"></script>
 <script src="libs/sdp-jingle-json.bundle.js"></script>
+<script src="xmppvideoroom.json" ></script>
+</head>
+<body> 
+	XMPP Url:<input id="xmppServer" type="text" size="50" /> 
+	Room id:<input id="xmppRoom" type="text" />
+	User id:<input id="xmppUser" type="text"  />
+	<input type="button" value="connect" onclick="connect()" />
+	<input type="button" value="disconnect" onclick="disconnect()" />
+</body>
 <script>
+	// set default value
+	document.querySelector('#xmppServer').value  = xmppRoomConfig.url;
+	document.querySelector('#xmppRoom').value = xmppRoomConfig.roomId;
+	document.querySelector('#xmppUser').value = xmppRoomConfig.user;
+	
+	
 	var peerid = Math.random();
 	var webrtcStream = "screen://"
 
@@ -28,12 +43,14 @@
 	
 	var client = null;
 	var sid = null;
+	var sessionid = null;
 
 	function onCall(iq, data) {
 	
 		// send ICE candidate to webrtc-streamer
 		iq.jingle.contents.forEach(function (content) {
-			content.transport.candidates.forEach(function (candidate) {
+			var candidates = content.transport.candidates || [];
+			candidates.forEach(function (candidate) {
 				var sdp = SJJ.toCandidateSDP(candidate);
 				sdp = sdp.replace("a=candidate","candidate");
 				write("============sdp:" + sdp);
@@ -53,7 +70,8 @@
 		});	
 				
 		// send WebRTC answer to XMPP server
-		var json = SJJ.toIncomingJSONAnswer(data.sdp);		
+		write("answer============sdp:" + data.sdp);		
+		var json = SJJ.toOutgoingJSONAnswer(data.sdp);		
 		client.sendIq({ type: "set", 
 				from: iq.to,
 				to: iq.from,
@@ -82,14 +100,85 @@
 		});
 	}
 
+	function onCreateOffer(iq, data) {
 	
+				
+		// send WebRTC answer to XMPP server
+		var json = SJJ.toOutgoingJSONOffer(data.sdp);		
+		client.sendIq({ type: "set", 
+				from: iq.to,
+				to: iq.from,
+				jingle:{
+					action:"session-accept",
+					sid:iq.jingle.sid,
+					initiator:iq.from,
+					contents:json.contents
+				}
+		}).then(function(result) {
+			sid = iq.jingle.sid;
+			write("============session-accept ok sid:" +  sid);
+
+			var sdp = SJJ.toOutgoingSDPAnswer(iq.jingle);
+			write("answer============sdp:" + sdp);
+			var answer = { type:"answer", sdp }
+			
+			var method = "/api/setAnswer?peerid="+ peerid;
+			request("POST" , method, { body: JSON.stringify(answer) }).done( function (response) { 
+					if (response.statusCode === 200) {
+						write("method:"+method+ " answer:" +response.body);
+					}
+					else {
+						onError(response.statusCode);
+					}
+				}
+			);				
+			
+			// send ICE candidate to webrtc-streamer
+			iq.jingle.contents.forEach(function (content) {
+				var candidates = content.transport.candidates || [];
+				candidates.forEach(function (candidate) {
+					var sdp = SJJ.toCandidateSDP(candidate);
+					sdp = sdp.replace("a=candidate","candidate");
+					write("============sdp:" + sdp);
+					var candidate = { candidate:sdp, sdpMid:content.name, sdpMLineIndex:0 }
+					
+					var method = "/api/addIceCandidate?peerid="+ peerid;
+					request("POST" , method, { body: JSON.stringify(candidate) }).done( function (response) { 
+							if (response.statusCode === 200) {
+								write("method:"+method+ " answer:" +response.body);
+							}
+							else {
+								onError(response.statusCode);
+							}
+						}
+					);				
+				});
+			});	
+
+			var method = "/api/getIceCandidate?peerid="+ peerid;
+			request("GET" , method).done( function (response) { 
+					if (response.statusCode === 200) {
+						onReceiveCandidate(iq,JSON.parse(response.body));
+					}
+					else {
+						onError(response.statusCode);
+					}
+				}
+			);					
+		}).catch(function(result) {
+			write("############session-accept error result:" +  JSON.stringify(result));
+		});
+	}
+
+
 	function onReceiveCandidate(iq, candidateList) {
 		write("============candidateList:" +  JSON.stringify(candidateList));
 		
+		var candidates = []
 		candidateList.forEach(function (candidate) {
 			var json = SJJ.toCandidateJSON(candidate.candidate);
 			write("============candidate:" +  JSON.stringify(json));
-			iq.jingle.contents.transport.candidates.push(json);
+			candidates.push(json);
 		});
 		
 		// send webrtc-streamer candidate to XMPP server
@@ -100,7 +189,7 @@
 					action:"transport-info",
 					sid:iq.jingle.sid,
 					contents:{
-						transport:iq.jingle.contents.transport
+						transport:{candidates}
 					}
 		}}).then(function(result) {
 			write("============transport-info ok result:" +  JSON.stringify(result));		
@@ -123,7 +212,8 @@
 		  transports: ['bosh']
 		});
 		
-		client.on('session:started', (jid) => {
+		client.on('session:started', (jid) => {		
+			sessionid = jid;
 			write("session:started: jid:" + jid)			
 
 			var caps = client.updateCaps();
@@ -143,6 +233,7 @@
 //		client.on('message', (data) => {write("message:" + JSON.stringify(data))} )		
 //		client.on('stanza', (data) => {write("stanza:" + JSON.stringify(data))} )
 				
+		client.on('muc:available', function (pres) { write("muc:available from:" + pres.from); });
 		client.on('muc:leave', function (pres) { write("muc:leave from:" + pres.from); });
 		client.on('muc:join', function (pres) {
 			write("muc:join from:" + pres.from);		
@@ -161,10 +252,10 @@
 		client.on('iq', function(iq) {	
 			write("iq:from:" + iq.from + " to:"+ iq.to + " " + JSON.stringify(iq));
 			
-			if ( iq.jingle && (iq.jingle.action === "session-initiate") && (iq.jingle.initiator.indexOf("focus@") === 0) ) {
-				if (iq.jingle.contents && iq.jingle.contents.length && iq.jingle.contents[0].creator === "initiator") {						
-
-					var sdp = SJJ.toIncomingSDPOffer(iq.jingle);
+			if ( iq.jingle && (iq.jingle.action === "session-initiate") && iq.jingle.contents) {
+				if (iq.jingle.initiator.indexOf("focus@") === 0)  {	
+				
+					var sdp = SJJ.toOutgoingSDPOffer(iq.jingle);
 					write("offer============sdp:" + sdp);							
 					
 					var method = "/api/call?peerid="+ peerid+"&url="+encodeURIComponent(webrtcStream)+"&audiourl=none"+"&options="+encodeURIComponent("rtptransport=tcp");
@@ -176,19 +267,22 @@
 								onError(response.statusCode);
 							}
 						}
-					);
+					);				
 				} else {
-					client.sendIq({ type: "set", 
-						from: iq.to,
-						to: iq.from,
-						jingle:{
-							action:"session-terminate",
-							sid:iq.jingle.sid
+				/*
+					var method = "/api/createOffer?peerid="+ peerid+"&url="+encodeURIComponent(webrtcStream)+"&audiourl=none"+"&options="+encodeURIComponent("rtptransport=tcp");
+					request("GET" , method).done( function (response) { 
+							if (response.statusCode === 200) {
+								onCreateOffer(iq,JSON.parse(response.body));
+							}
+							else {
+								onError(response.statusCode);
+							}
 						}
-					})					
+					);
+*/					
 				}
-			}			
-
+			}						
 		});
 
 		client.disco.addIdentity({ category: 'client', type: 'phone' });
@@ -208,8 +302,8 @@
 		if (client) {
 			if (sid) {
 				client.sendIq({ type: "set", 
-					from: iq.to,
-					to: iq.from,
+					from: roomUrl +"/" + userName,
+					to: sessionid,
 					jingle:{
 						action:"session-terminate",
 						sid:sid
@@ -220,30 +314,22 @@
 		
 			client.leaveRoom(roomUrl, userName);
 			client = null;
-		}
 		
-		var method = "/api/hangup?peerid="+ peerid;
-		request("GET" , method).done( function (response) { 
-				if (response.statusCode === 200) {
-					write("method:"+method+ " answer:" +response.body);
+			var method = "/api/hangup?peerid="+ peerid;
+			request("GET" , method).done( function (response) { 
+					if (response.statusCode === 200) {
+						write("method:"+method+ " answer:" +response.body);
+					}
+					else {
+						onError(response.statusCode);
+					}
 				}
-				else {
-					onError(response.statusCode);
-				}
-			}
-		);		
+			);		
+		}
 	}
 	
 	window.onbeforeunload = function() { 
 		disconnect();
 	};		
 </script>
-</head>
-<body> 
-	XMPP Url:<input id="xmppServer" type="text" size="50" value="jitsi.ubuntu.com" /> 
-	User id:<input id="xmppUser" type="text" value="user" />
-	Room id:<input id="xmppRoom" type="text" value="testroom" />
-	<input type="button" value="connect" onclick="connect()" />
-	<input type="button" value="disconnect" onclick="disconnect()" />
-</body>
 </html>
