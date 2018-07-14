@@ -1,0 +1,93 @@
+<html>
+<head>
+<script src="libs/request.min.js" ></script>
+<script src="libs/ag-grid.min.js"></script>
+<script src="libs/adapter.min.js"></script>
+<script src="webrtcstreamer.json" ></script>
+<script src="webrtcstreamer.js" ></script>
+<style type="text/css">
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+footer {
+  text-align: center; 
+}
+</style> 
+</head>
+<body> 
+	<div id="myGrid" style="height: 80%;" class="ag-fresh"></div>
+	<footer id="footer"></footer>
+</body>
+<script>	
+	// columns
+	var columnDefs = [
+	    { headerName: "Peerid" , field: "peerid",  cellClass: "cell" },
+	    { headerName: "Streams", field: "streams",  cellClass: "cell" },
+	    { headerName: "Action" , cellClass: "cell", 
+	      field: "action", 
+	      cellRenderer: function(params) { 
+	        var eDiv = document.createElement('div');
+	        var eButton = document.createElement('button');
+		eButton.innerHTML = params.value;
+		eDiv.appendChild(eButton);
+		eButton.addEventListener('click', function() {
+			request( 'GET',  webrtcConfig.url + "/api/hangup?peerid=" + params.data.peerid )
+		});
+
+		return eDiv;
+              } 
+	    }
+	];
+
+	// options
+	var gridOptions = {
+		enableFilter: true,
+		enableSorting: true,
+		enableColResize: true,
+		columnDefs: columnDefs,
+		onGridReady: function($event) { $event.api.sizeColumnsToFit(); }
+	};
+	
+	// fill grid
+	new agGrid.Grid(document.querySelector('#myGrid'), gridOptions);	
+	
+	// ------------------------------------------
+	// init device list 
+	// ------------------------------------------	
+	function onGetDeviceList(remoteDeviceList) {
+	
+		var rowData = [];
+		remoteDeviceList.forEach(function(item) {
+			rowData.push({peerid: Object.keys(item)[0] , streams:JSON.stringify(Object.values(item)[0].streams) , action:"hangup" })
+		});
+		gridOptions.api.setRowData(rowData);		
+	}
+	
+	// ------------------------------------------
+	// Fill version
+	// ------------------------------------------	
+	function onVersion(version) {
+		document.getElementById("footer").innerHTML = "<p><a href='https://github.com/mpromonet/webrtc-streamer'>WebRTC-Streamer</a>"
+							+ " " + version.split(" ")[0] + "</p>";
+	}
+		
+	// load
+	window.onload         = function() { 
+		request( 'GET',  webrtcConfig.url + "/api/getPeerConnectionList" ).done(
+			function (response) {
+				if (response.statusCode === 200) { onGetDeviceList(JSON.parse(response.body)) }
+			});
+		request( 'GET',  webrtcConfig.url + "/api/version" ).done(
+			function (response) {
+				if (response.statusCode === 200) { onVersion(JSON.parse(response.body)) }
+			});
+	} 
+	
+	// unload
+	window.onbeforeunload = function() { 
+	}
+</script>
+</html>
+
