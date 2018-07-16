@@ -79,7 +79,12 @@ footer {
 				}
 			)
 			
-			rowData.push({peerid: Object.keys(item)[0] , stream: Object.keys(peerConnection.streams[0])[0],size:frameHeight+"x"+frameWidth, sent:framesSent, received:framesReceived , action:"hangup" })
+			var stream = "";
+			if (peerConnection.hasOwnProperty("streams")){
+				stream = Object.keys(peerConnection.streams[0])[0];
+			}
+			
+			rowData.push({peerid: Object.keys(item)[0] , stream, size:frameHeight+"x"+frameWidth, sent:framesSent, received:framesReceived , action:"hangup" })
 		});
 		gridOptions.api.setRowData(rowData);		
 	}
