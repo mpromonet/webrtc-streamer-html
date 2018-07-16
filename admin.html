@@ -24,7 +24,10 @@ footer {
 	// columns
 	var columnDefs = [
 	    { headerName: "Peerid" , field: "peerid",  cellClass: "cell" },
-	    { headerName: "Streams", field: "streams",  cellClass: "cell" },
+	    { headerName: "Stream", field: "stream",  cellClass: "cell" },
+	    { headerName: "Size", field: "size",  cellClass: "cell" },
+	    { headerName: "Sent", field: "sent",  cellClass: "cell" },
+	    { headerName: "Received", field: "received",  cellClass: "cell" },
 	    { headerName: "Action" , cellClass: "cell", 
 	      field: "action", 
 	      cellRenderer: function(params) { 
@@ -56,11 +59,27 @@ footer {
 	// ------------------------------------------
 	// init device list 
 	// ------------------------------------------	
-	function onGetDeviceList(remoteDeviceList) {
+	function onGetPeerConnectionList(peerConnectionList) {
 	
 		var rowData = [];
-		remoteDeviceList.forEach(function(item) {
-			rowData.push({peerid: Object.keys(item)[0] , streams:JSON.stringify(Object.values(item)[0].streams) , action:"hangup" })
+		peerConnectionList.forEach(function(item) {
+			var peerConnection = Object.values(item)[0];
+			var stats = peerConnection.stats;
+			var frameHeight = "0";
+			var frameWidth = "0";
+			var framesSent = "";
+			var framesReceived = "";
+			Object.entries(stats).forEach( ([key, value]) => {
+					if (value.hasOwnProperty("trackIdentifier")) {
+						frameHeight = value.frameHeight;
+						frameWidth = value.frameWidth;
+						framesSent = value.framesSent;
+						framesReceived = value.framesReceived;
+					}
+				}
+			)
+			
+			rowData.push({peerid: Object.keys(item)[0] , stream: Object.keys(peerConnection.streams[0])[0],size:frameHeight+"x"+frameWidth, sent:framesSent, received:framesReceived , action:"hangup" })
 		});
 		gridOptions.api.setRowData(rowData);		
 	}
@@ -72,13 +91,18 @@ footer {
 		document.getElementById("footer").innerHTML = "<p><a href='https://github.com/mpromonet/webrtc-streamer'>WebRTC-Streamer</a>"
 							+ " " + version.split(" ")[0] + "</p>";
 	}
-		
-	// load
-	window.onload         = function() { 
+	
+	function getPeerConnectionList() {
 		request( 'GET',  webrtcConfig.url + "/api/getPeerConnectionList" ).done(
 			function (response) {
-				if (response.statusCode === 200) { onGetDeviceList(JSON.parse(response.body)) }
+				if (response.statusCode === 200) { onGetPeerConnectionList(JSON.parse(response.body)) }
 			});
+	}
+
+	// load
+	window.onload         = function() { 
+		getPeerConnectionList();
+		window.setInterval(()=> { getPeerConnectionList(); }, 2000);
 		request( 'GET',  webrtcConfig.url + "/api/version" ).done(
 			function (response) {
 				if (response.statusCode === 200) { onVersion(JSON.parse(response.body)) }
