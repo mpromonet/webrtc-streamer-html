@@ -2,13 +2,14 @@
 <head>
 <script src="libs/request.min.js"></script>
 <script src="libs/stanzaio.bundle.min.js"></script>
-<script src="libs/sdp-jingle-json.bundle.js"></script>
+<script src="libs/sdp-jingle-json.bundle.min.js"></script>
 <script src="xmppvideoroom.json" ></script>
 </head>
 <body> 
 	XMPP Url:<input id="xmppServer" type="text" size="50" /> 
 	Room id:<input id="xmppRoom" type="text" />
-	User id:<input id="xmppUser" type="text"  />
+	User id:<input id="xmppUser" type="text"  /><br/>
+	WebRTC stream:<input id="webrtcStream" type="text" size="50" value="rtsp://217.17.220.110/axis-media/media.amp" />
 	<input type="button" value="connect" onclick="connect()" />
 	<input type="button" value="disconnect" onclick="disconnect()" />
 </body>
@@ -19,8 +20,6 @@
 	document.querySelector('#xmppUser').value = xmppRoomConfig.user;
 	
 	
-	var webrtcStream = "screen://0"
-
 	function write(text, value) {
 		var textNode = document.createElement("li");
 		textNode.textContent = text;
@@ -43,9 +42,10 @@
 	var client = null;
 	var connection = [];
 	
-	function onCall(iq, peerid, data) {
-	        var conn = {peerid, to:iq.from} 
-		
+	function onCall(iq, data) {
+	    var conn = {sid:iq.jingle.sid, to:iq.from} 
+		var peerid = iq.jingle.sid;
+
 		// send ICE candidate to webrtc-streamer
 		iq.jingle.contents.forEach(function (content) {
 			var candidates = content.transport.candidates || [];
@@ -81,9 +81,7 @@
 					contents:json.contents
 				}
 		}).then(function(result) {
-			var sid = iq.jingle.sid;
-			write("============session-accept ok sid:" +  sid);
-			conn.sid = sid;
+			write("============session-accept ok sid:" + iq.jingle.sid);
 				
 			var method = "/api/getIceCandidate?peerid="+ peerid;
 			request("GET" , method).done( function (response) { 
@@ -183,13 +181,15 @@
 		client.on('iq', function(iq) {	
 //			write("iq:from:" + iq.from + " to:"+ iq.to + " " + JSON.stringify(iq));
 			
+			var webrtcStream = document.querySelector('#webrtcStream').value;
+
 			if ( iq.jingle && (iq.jingle.action === "session-initiate") && iq.jingle.contents) {
 				if (iq.jingle.initiator.indexOf("focus@") === 0)  {	
 				
 					var sdp = SJJ.toIncomingSDPOffer(iq.jingle);
 					write("incoming offer============sdp:" + sdp);							
 					
-					var peerid = Math.random();
+					var peerid = iq.jingle.sid;
 					var method = "/api/call?peerid="+ peerid+"&url="+encodeURIComponent(webrtcStream)+"&options="+encodeURIComponent("rtptransport=tcp");
 					request("POST" , method, {body:JSON.stringify({type:"offer",sdp})}).done( function (response) { 
 							if (response.statusCode === 200) {
@@ -202,13 +202,13 @@
 					);	
 					
 				} else {
-					var peerid = Math.random();
+					var peerid = iq.jingle.sid;
 					var sdp = SJJ.toOutgoingSDPOffer(iq.jingle);
 					write("outgoing offer============sdp:" + sdp);
 					var method = "/api/call?peerid="+ peerid+"&url="+encodeURIComponent(webrtcStream)+"&options="+encodeURIComponent("rtptransport=tcp");
 					request("POST" , method, {body:JSON.stringify({type:"offer",sdp})}).done( function (response) { 
 							if (response.statusCode === 200) {
-								onCall(iq,peerid,JSON.parse(response.body));
+								onCall(iq,JSON.parse(response.body));
 							}
 							else {
 								onError(response.statusCode);
@@ -246,7 +246,7 @@
 					})	
 				}
 				
-				var method = "/api/hangup?peerid="+ conn.peerid;
+				var method = "/api/hangup?peerid="+ conn.sid;
 				request("GET" , method).done( function (response) { 
 						if (response.statusCode === 200) {
 							write("method:"+method+ " answer:" +response.body);
