@@ -1,7 +1,10 @@
 <html>
 <head>
-<script src="libs/strophe.js" ></script>
+<script src="libs/strophe.min.js" ></script>
 <script src="libs/strophe.muc.min.js" ></script>
+<script src="libs/strophe.jingle.sdp.js"></script>
+<script src="libs/jquery-1.12.4.min.js"></script>
+<script src="libs/request.min.js"></script>
 <script src="xmppvideoroom.json" ></script>
 </head>
 <body> 
@@ -31,9 +34,65 @@
 		console.log("OnPresence from:" + data.getAttribute("from") + " to:" + data.getAttribute("to") );
 		return true;
 	}
+
+	function onCall(iq, data) {
+		console.log("answer============sdp:" + data.sdp);		
+		
+		var jingle = iq.querySelector("jingle");
+		var sid = jingle.getAttribute("sid");
+				
+		var sdp = new SDP(data.sdp);
+		var param = $iq({ type: "set",  from: iq.getAttribute("to"), to: iq.getAttribute("from") })
+		var jingle = param.c('jingle', {xmlns: 'urn:xmpp:jingle:1'});
+		jingle.attrs({ action: "session-accept",  sid, responder:iq.getAttribute("to") });
+		var jingleanswer = sdp.toJingle(jingle); 
+		connection.sendIQ(jingleanswer);
+	}
+	
+	function onError (error) {
+		console.log("############onError:" + error)
+	}
+	
+	var sessionList = []; 
 	
 	function OnJingle(iq) {
 		console.log("OnJingle from:" + iq.getAttribute("from") + " to:" + iq.getAttribute("to") + " action:" +  iq.querySelector("jingle").getAttribute("action"));
+		var action = iq.querySelector("jingle").getAttribute("action");
+
+		if (action === "session-initiate") {
+			var groups =  iq.querySelector("jingle").querySelector("group");
+			console.log("groups:" + groups);
+			
+			if (groups!=null) {
+				
+				var jingle = iq.querySelector("jingle");
+				var sid = jingle.getAttribute("sid");
+				
+				var sdp = new SDP('');
+				sdp.fromJingle($(jingle));
+
+				console.log("outgoing offer============sdp:" + sdp.raw);
+				var webrtcStream = document.querySelector('#webrtcStream').value;
+				var method = "/api/call?peerid="+ sid+"&url="+encodeURIComponent(webrtcStream)+"&options="+encodeURIComponent("rtptransport=tcp");
+				request("POST" , method, {body:JSON.stringify({type:"offer",sdp:sdp.raw})}).done( function (response) { 
+						if (response.statusCode === 200) {
+							onCall(iq,JSON.parse(response.body));
+						}
+						else {
+							onError(response.statusCode);
+						}
+					}
+				);
+				sessionList.push(sid);
+				
+				var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id:iq.getAttribute("id") })
+				connection.sendIQ(ack);		
+			}
+		} else if (action === "transport-info") {
+			var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id:iq.getAttribute("id") })
+			connection.sendIQ(ack);		
+		}
+					
 		return true;		
 	}
 	
@@ -54,6 +113,14 @@
 		if (connection.disco) {
 			connection.disco.addIdentity('client', 'web');
 			connection.disco.addFeature(Strophe.NS.DISCO_INFO);
+			connection.disco.addFeature("urn:xmpp:jingle:1");
+			connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:1");
+			connection.disco.addFeature("urn:xmpp:jingle:transports:ice-udp:1");
+			connection.disco.addFeature("urn:xmpp:jingle:transports:raw-udp:1");
+			connection.disco.addFeature("urn:xmpp:jingle:apps:dtls:0");
+			connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:audio");
+			connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:video");
+			connection.disco.addFeature("urn:ietf:rfc:5761") // rtcp-mux	
 		}
 		
 //		connection.rawInput = function (data) { console.log('RECV: ' + data); };
@@ -78,6 +145,24 @@
 	
 	function disconnect() {
 		if (connection) {
+			sessionList.forEach( (sid) => {
+			
+				var param = $iq({ type: "set",  from: roomUrl +"/" + userName, to: roomUrl })
+				var jingle = param.c('jingle', {xmlns: 'urn:xmpp:jingle:1'});
+				jingle.attrs({ action: "session-terminate",  sid});
+			
+				var method = "/api/hangup?peerid="+ sid;
+				request("GET" , method).done( function (response) { 
+						if (response.statusCode === 200) {
+							console.log("method:"+method+ " answer:" +response.body);
+						}
+						else {
+							onError(response.statusCode);
+						}
+					}
+				);					
+			});
+		
 			connection.muc.groupchat(roomUrl, "Bye");
 			connection.muc.leave(roomUrl, userName);
 			connection.flush();
