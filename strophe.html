@@ -1,6 +1,6 @@
 <html>
 <head>
-<script src="libs/strophe.min.js" ></script>
+<script src="libs/strophe.js" ></script>
 <script src="libs/strophe.muc.min.js" ></script>
 <script src="xmppvideoroom.json" ></script>
 </head>
@@ -25,13 +25,16 @@
 		
 	function OnMessage(data)  {
 		console.log("OnMessage from:" + data.getAttribute("from") + " to:" + data.getAttribute("to") + " msg:" + data.textContent) 
+		return true;
 	}
 	function OnPresence(data) {
-		console.log("OnPresence from:" + data.getAttribute("from") + " to:" + data.getAttribute("to"));
-		var from = data.getAttribute('from');
-		if (from === (roomUrl + "/" + userName) ) {	
-			console.log("OnPresence initialized")		
-		}
+		console.log("OnPresence from:" + data.getAttribute("from") + " to:" + data.getAttribute("to") );
+		return true;
+	}
+	
+	function OnJingle(iq) {
+		console.log("OnJingle from:" + iq.getAttribute("from") + " to:" + iq.getAttribute("to") + " action:" +  iq.querySelector("jingle").getAttribute("action"));
+		return true;		
 	}
 	
 	function onConnect(status)
@@ -47,6 +50,15 @@
 	    } else if (status === Strophe.Status.CONNECTED) {
 		console.log('Strophe is connected.');
 		
+		// disco stuff
+		if (connection.disco) {
+			connection.disco.addIdentity('client', 'web');
+			connection.disco.addFeature(Strophe.NS.DISCO_INFO);
+		}
+		
+//		connection.rawInput = function (data) { console.log('RECV: ' + data); };
+//        connection.rawOutput = function (data) { console.log('SEND: ' + data); };
+		
 		connection.muc.join(roomUrl, userName, OnMessage, OnPresence);		
 		connection.muc.groupchat(roomUrl, "Hi");
 	    }
@@ -60,6 +72,7 @@
 		roomUrl = roomName + "@" + "conference." + serverName;
 		
 		connection = new Strophe.Connection(location.protocol+ "//" + serverName + "/http-bind");
+		connection.addHandler(OnJingle, 'urn:xmpp:jingle:1', 'iq', 'set', null, null);
 		connection.connect(serverName, null, onConnect);
 	}
 	
