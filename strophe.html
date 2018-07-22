@@ -138,8 +138,8 @@
 					candidates.each ( (idx,candidate) => {
 						var sdp = SDPUtil.candidateFromJingle(candidate);
 						sdp = sdp.replace("a=candidate","candidate");
-						sdp = sdp.replace("\r\n"," ufrag " + ufrag + "\r\n");
-						var candidate = { candidate:sdp, sdpMid:content.getAttribute('name'), sdpMLineIndex:contentIdx }
+						sdp = sdp.replace("\r\n","ufrag " + ufrag + "\r\n");
+						var candidate = { candidate:sdp, sdpMLineIndex:contentIdx }
 						console.log("send webrtc candidate============:" + JSON.stringify(candidate));
 			
 						var method = "/api/addIceCandidate?peerid="+ sid;
