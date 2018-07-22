@@ -1,0 +1,109 @@
+<html>
+<head>
+<script src="libs/request.min.js"></script>
+<script src="libs/stanzaio.bundle.min.js"></script>
+<script src="libs/sdp-jingle-json.bundle.min.js"></script>
+<script src="xmppvideoroom.json" ></script>
+</head>
+<body> 
+	XMPP Url:<input id="xmppServer" type="text" size="50" /> 
+	Room id:<input id="xmppRoom" type="text" />
+	User id:<input id="xmppUser" type="text"  /><br/>
+	<input type="button" value="connect" onclick="connect()" />
+	<input type="button" value="disconnect" onclick="disconnect()" />
+</body>
+<script>
+	// set default value
+	document.querySelector('#xmppServer').value  = xmppRoomConfig.url;
+	document.querySelector('#xmppRoom').value = xmppRoomConfig.roomId;
+	document.querySelector('#xmppUser').value = "xmpp";
+	
+	
+	function write(text, value) {
+		var textNode = document.createElement("li");
+		textNode.textContent = text;
+		if (value instanceof Array) {
+			var arrayNode = document.createElement("ul");
+			value.forEach((itemText) => {
+				var item = document.createElement("li");
+				item.textContent = JSON.stringify(itemText);		
+				arrayNode.appendChild(item);				
+			})
+			textNode.appendChild(arrayNode);
+		}
+		document.body.appendChild(textNode);
+	}
+	
+	function onError (error) {
+		write("############onError:" + error)
+	}
+	
+	var client = null;
+
+	function connect() {
+		var serverName = document.querySelector('#xmppServer').value;
+		var userName = document.querySelector('#xmppUser').value;	
+		var roomName = document.querySelector('#xmppRoom').value;
+		var mucUrl = "conference." + serverName;
+		var roomUrl = roomName + "@" + mucUrl;
+	
+		client = XMPP.createClient({
+		  jid: roomName + "@" + serverName,
+		  boshURL: location.protocol+ "//" + serverName + "/http-bind",
+		  transports: ['bosh']
+		});
+		
+		client.on('session:started', (jid) => {		
+			sessionid = jid;
+			write("session:started: jid:" + jid)			
+
+			var caps = client.updateCaps();
+			write("caps features:", caps.discoInfo.features)		
+			
+			client.getDiscoInfo(serverName,'', (err, data) => { write(serverName +" info:", data.discoInfo.features) });
+			client.getDiscoInfo(mucUrl,'', (err, data) => { write(mucUrl +" info:", data.discoInfo.features) });
+			client.getDiscoInfo(roomUrl,'', (err, data) => { write(roomUrl +" info:", data.discoInfo.features) });
+			
+			client.getDiscoItems(serverName,'', (err, data) => { write(serverName +" item:", data.discoItems.items) });
+			client.getDiscoItems(mucUrl,'', (err, data) => { write(mucUrl +" item:", data.discoItems.items) });
+			client.getDiscoItems(roomUrl,'', (err, data) => { write(roomUrl + " item:", data.discoItems.items) });
+			
+			client.joinRoom(roomUrl, userName, {type:"available",nick:userName});				
+		} );
+								
+		client.on('muc:available', function (pres) { write("muc:available from:" + pres.from); });
+		client.on('muc:leave', function (pres) { write("muc:leave from:" + pres.from); });
+		client.on('muc:join', function (pres) { write("muc:join from:" + pres.from); });
+
+		client.on('presence', function (pres) { write("presence from:" + pres.from + " type:" + pres.type) });
+		
+		client.on('iq', function(iq) {	
+			write("iq:from:" + iq.from + " to:"+ iq.to + " " + JSON.stringify(iq));			
+		});
+
+		client.disco.addIdentity({ category: 'client', type: 'phone' });	
+
+		client.connect();			
+				
+	}
+	
+	function disconnect() {
+		var serverName = document.querySelector('#xmppServer').value;
+		var userName = document.querySelector('#xmppUser').value;	
+		var roomName = document.querySelector('#xmppRoom').value;
+		var muc = "conference." + serverName;
+		var roomUrl = roomName + "@" + muc;
+
+		if (client) {						
+			client.leaveRoom(roomUrl, userName);
+			client = null;
+		
+		
+		}
+	}
+	
+	window.onbeforeunload = function() { 
+		disconnect();
+	};		
+</script>
+</html>
