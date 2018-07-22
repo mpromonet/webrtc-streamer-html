@@ -2,6 +2,7 @@
 <head>
 <script src="libs/strophe.min.js" ></script>
 <script src="libs/strophe.muc.min.js" ></script>
+<script src="libs/strophe.disco.min.js" ></script>
 <script src="libs/strophe.jingle.sdp.js"></script>
 <script src="libs/jquery-1.12.4.min.js"></script>
 <script src="libs/request.min.js"></script>
@@ -44,6 +45,7 @@
 			var json = SDPUtil.parse_icecandidate(candidate.candidate);
 			console.log("webrtc candidate==================" +  JSON.stringify(json));
 
+			//TODO convert candidate from webrtc to jingle 
 			var param = $iq({ type: "set",  from: iq.getAttribute("to"), to: iq.getAttribute("from") })
 			var jingle = param.c('jingle', {xmlns: 'urn:xmpp:jingle:1'});
 			jingle.attrs({ action: "transport-info",  sid });
@@ -193,7 +195,9 @@
 	//		connection.rawInput = function (data) { console.log('RECV: ' + data); };
 	//      connection.rawOutput = function (data) { console.log('SEND: ' + data); };
 			
-			connection.muc.join(roomUrl, userName, OnMessage, OnPresence);		
+			var extPresence = Strophe.Builder('nick', {xmlns:'http://jabber.org/protocol/nick', value: userName});
+
+			connection.muc.join(roomUrl, userName, OnMessage, OnPresence, null, null, null, extPresence);		
 			connection.muc.groupchat(roomUrl, "Hi");
 	    }
 	}
