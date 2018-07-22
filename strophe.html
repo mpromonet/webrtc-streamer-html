@@ -100,32 +100,27 @@
 		var sid = jingle.getAttribute("sid");
 		var action = jingle.getAttribute("action");
 
-		if (action === "session-initiate") {
-			var groups =  jingle.querySelector("group");
-			console.log("groups:" + groups);
-			
-			if (groups!=null) {
-				
-				var sdp = new SDP('');
-				sdp.fromJingle($(jingle));
+		if (action === "session-initiate") {	
+			var sdp = new SDP('');
+			sdp.fromJingle($(jingle));
 
-				console.log("xmpp offer============sdp:" + sdp.raw);
-				var webrtcStream = document.querySelector('#webrtcStream').value;
-				var method = "/api/call?peerid="+ sid +"&url="+encodeURIComponent(webrtcStream)+"&options="+encodeURIComponent("rtptransport=tcp");
-				request("POST" , method, {body:JSON.stringify({type:"offer",sdp:sdp.raw})}).done( function (response) { 
-						if (response.statusCode === 200) {
-							onCall(iq,JSON.parse(response.body));
-						}
-						else {
-							onError(response.statusCode);
-						}
+			console.log("xmpp offer============sdp:" + sdp.raw);
+			var webrtcStream = document.querySelector('#webrtcStream').value;
+			var method = "/api/call?peerid="+ sid +"&url="+encodeURIComponent(webrtcStream)+"&options="+encodeURIComponent("rtptransport=tcp");
+			request("POST" , method, {body:JSON.stringify({type:"offer",sdp:sdp.raw})}).done( function (response) { 
+					if (response.statusCode === 200) {
+						onCall(iq,JSON.parse(response.body));
 					}
-				);
-				sessionList[sid]=iq;
-				
-				var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id:iq.getAttribute("id") })
-				connection.sendIQ(ack);		
-			}
+					else {
+						onError(response.statusCode);
+					}
+				}
+			);
+			sessionList[sid]=iq;
+			
+			var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id:iq.getAttribute("id") })
+			connection.sendIQ(ack);		
+
 		} else if (action === "transport-info") {
 
 			var session = sessionList[sid];
