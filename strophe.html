@@ -35,45 +35,81 @@
 		return true;
 	}
 
+	function onReceiveCandidate(iq, candidateList) {
+		console.log("============candidateList:" +  JSON.stringify(candidateList));
+		var jingle = iq.querySelector("jingle");
+		var sid = jingle.getAttribute("sid");
+
+		candidateList.forEach(function (candidate) {
+			var json = SDPUtil.parse_icecandidate(candidate.candidate);
+			console.log("webrtc candidate==================" +  JSON.stringify(json));
+
+			var param = $iq({ type: "set",  from: iq.getAttribute("to"), to: iq.getAttribute("from") })
+			var jingle = param.c('jingle', {xmlns: 'urn:xmpp:jingle:1'});
+			jingle.attrs({ action: "transport-info",  sid });
+
+			var id = connection.sendIQ(jingle, () => {
+				console.log("============transport-info ok sid:" + sid);		
+			},() => {
+				console.log("############transport-info error sid:" + sid);
+			});
+		});	
+	}
+
 	function onCall(iq, data) {
-		console.log("answer============sdp:" + data.sdp);		
+		console.log("webrtc answer========================" + data.sdp);		
 		
 		var jingle = iq.querySelector("jingle");
 		var sid = jingle.getAttribute("sid");
 				
 		var sdp = new SDP(data.sdp);
-		var param = $iq({ type: "set",  from: iq.getAttribute("to"), to: iq.getAttribute("from") })
-		var jingle = param.c('jingle', {xmlns: 'urn:xmpp:jingle:1'});
+		var iqAnswer = $iq({ type: "set",  from: iq.getAttribute("to"), to: iq.getAttribute("from") })
+		var jingle = iqAnswer.c('jingle', {xmlns: 'urn:xmpp:jingle:1'});
 		jingle.attrs({ action: "session-accept",  sid, responder:iq.getAttribute("to") });
+
 		var jingleanswer = sdp.toJingle(jingle); 
-		connection.sendIQ(jingleanswer);
+		var id = connection.sendIQ(jingleanswer, () => {
+			console.log("============session-accept ok sid:" + sid);
+				
+			var method = "/api/getIceCandidate?peerid="+ sid;
+			request("GET" , method).done( function (response) { 
+					if (response.statusCode === 200) {
+						onReceiveCandidate(jingleanswer.node,JSON.parse(response.body));
+					}
+					else {
+						onError(response.statusCode);
+					}
+				}
+			);			
+		},() => {
+			console.log("############session-accept error sid:" + sid);
+		});
 	}
 	
 	function onError (error) {
 		console.log("############onError:" + error)
 	}
 	
-	var sessionList = []; 
+	var sessionList = {}; 
 	
 	function OnJingle(iq) {
 		console.log("OnJingle from:" + iq.getAttribute("from") + " to:" + iq.getAttribute("to") + " action:" +  iq.querySelector("jingle").getAttribute("action"));
-		var action = iq.querySelector("jingle").getAttribute("action");
+		var jingle = iq.querySelector("jingle");
+		var sid = jingle.getAttribute("sid");
+		var action = jingle.getAttribute("action");
 
 		if (action === "session-initiate") {
-			var groups =  iq.querySelector("jingle").querySelector("group");
+			var groups =  jingle.querySelector("group");
 			console.log("groups:" + groups);
 			
 			if (groups!=null) {
 				
-				var jingle = iq.querySelector("jingle");
-				var sid = jingle.getAttribute("sid");
-				
 				var sdp = new SDP('');
 				sdp.fromJingle($(jingle));
 
-				console.log("outgoing offer============sdp:" + sdp.raw);
+				console.log("xmpp offer============sdp:" + sdp.raw);
 				var webrtcStream = document.querySelector('#webrtcStream').value;
-				var method = "/api/call?peerid="+ sid+"&url="+encodeURIComponent(webrtcStream)+"&options="+encodeURIComponent("rtptransport=tcp");
+				var method = "/api/call?peerid="+ sid +"&url="+encodeURIComponent(webrtcStream)+"&options="+encodeURIComponent("rtptransport=tcp");
 				request("POST" , method, {body:JSON.stringify({type:"offer",sdp:sdp.raw})}).done( function (response) { 
 						if (response.statusCode === 200) {
 							onCall(iq,JSON.parse(response.body));
@@ -83,12 +119,43 @@
 						}
 					}
 				);
-				sessionList.push(sid);
+				sessionList[sid]=iq;
 				
 				var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id:iq.getAttribute("id") })
 				connection.sendIQ(ack);		
 			}
 		} else if (action === "transport-info") {
+
+			var session = sessionList[sid];
+			console.log("xmpp candidate============sid:" + sid);
+
+			var contents = $(jingle).find('>content');
+			contents.each( (contentIdx,content) => {
+				var transports = $(content).find('>transport');
+				transports.each( (idx,transport) => {
+					var ufrag = transport.getAttribute('ufrag');
+					var candidates = $(transport).find('>candidate');
+					candidates.each ( (idx,candidate) => {
+						var sdp = SDPUtil.candidateFromJingle(candidate);
+						sdp = sdp.replace("a=candidate","candidate");
+						sdp = sdp.replace("\r\n"," ufrag " + ufrag + "\r\n");
+						var candidate = { candidate:sdp, sdpMid:content.getAttribute('name'), sdpMLineIndex:contentIdx }
+						console.log("send webrtc candidate============:" + JSON.stringify(candidate));
+			
+						var method = "/api/addIceCandidate?peerid="+ sid;
+						request("POST" , method, { body: JSON.stringify(candidate) }).done( function (response) { 
+								if (response.statusCode === 200) {
+									console.log("method:"+method+ " answer:" +response.body);
+								}
+								else {
+									onError(response.statusCode);
+								}
+							}
+						);							
+					});
+				});
+			});
+	
 			var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id:iq.getAttribute("id") })
 			connection.sendIQ(ack);		
 		}
@@ -99,35 +166,35 @@
 	function onConnect(status)
 	{		
 	    if (status === Strophe.Status.CONNECTING) {
-		console.log('Strophe is connecting.');
+			console.log('Strophe is connecting.');
 	    } else if (status === Strophe.Status.CONNFAIL) {
-		console.log('Strophe failed to connect.');
+			console.log('Strophe failed to connect.');
 	    } else if (status === Strophe.Status.DISCONNECTING) {
-		console.log('Strophe is disconnecting.');
+			console.log('Strophe is disconnecting.');
 	    } else if (status === Strophe.Status.DISCONNECTED) {
-		console.log('Strophe is disconnected.');
+			console.log('Strophe is disconnected.');
 	    } else if (status === Strophe.Status.CONNECTED) {
-		console.log('Strophe is connected.');
-		
-		// disco stuff
-		if (connection.disco) {
-			connection.disco.addIdentity('client', 'web');
-			connection.disco.addFeature(Strophe.NS.DISCO_INFO);
-			connection.disco.addFeature("urn:xmpp:jingle:1");
-			connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:1");
-			connection.disco.addFeature("urn:xmpp:jingle:transports:ice-udp:1");
-			connection.disco.addFeature("urn:xmpp:jingle:transports:raw-udp:1");
-			connection.disco.addFeature("urn:xmpp:jingle:apps:dtls:0");
-			connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:audio");
-			connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:video");
-			connection.disco.addFeature("urn:ietf:rfc:5761") // rtcp-mux	
-		}
-		
-//		connection.rawInput = function (data) { console.log('RECV: ' + data); };
-//        connection.rawOutput = function (data) { console.log('SEND: ' + data); };
-		
-		connection.muc.join(roomUrl, userName, OnMessage, OnPresence);		
-		connection.muc.groupchat(roomUrl, "Hi");
+			console.log('Strophe is connected.');
+			
+			// disco stuff
+			if (connection.disco) {
+				connection.disco.addIdentity('client', 'web');
+				connection.disco.addFeature(Strophe.NS.DISCO_INFO);
+				connection.disco.addFeature("urn:xmpp:jingle:1");
+				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:1");
+				connection.disco.addFeature("urn:xmpp:jingle:transports:ice-udp:1");
+				connection.disco.addFeature("urn:xmpp:jingle:transports:raw-udp:1");
+				connection.disco.addFeature("urn:xmpp:jingle:apps:dtls:0");
+				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:audio");
+				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:video");
+				connection.disco.addFeature("urn:ietf:rfc:5761") // rtcp-mux	
+			}
+			
+	//		connection.rawInput = function (data) { console.log('RECV: ' + data); };
+	//      connection.rawOutput = function (data) { console.log('SEND: ' + data); };
+			
+			connection.muc.join(roomUrl, userName, OnMessage, OnPresence);		
+			connection.muc.groupchat(roomUrl, "Hi");
 	    }
 	}
 	
@@ -145,7 +212,7 @@
 	
 	function disconnect() {
 		if (connection) {
-			sessionList.forEach( (sid) => {
+			Object.keys(sessionList).forEach( (sid) => {
 			
 				var param = $iq({ type: "set",  from: roomUrl +"/" + userName, to: roomUrl })
 				var jingle = param.c('jingle', {xmlns: 'urn:xmpp:jingle:1'});
