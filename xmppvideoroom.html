@@ -177,6 +177,7 @@
 			if (connection.disco) {
 				connection.disco.addIdentity('client', 'web');
 				connection.disco.addFeature(Strophe.NS.DISCO_INFO);
+				connection.disco.addFeature(Strophe.NS.CAPS);
 				connection.disco.addFeature("urn:xmpp:jingle:1");
 				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:1");
 				connection.disco.addFeature("urn:xmpp:jingle:transports:ice-udp:1");
@@ -184,13 +185,13 @@
 				connection.disco.addFeature("urn:xmpp:jingle:apps:dtls:0");
 				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:audio");
 				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:video");
-				connection.disco.addFeature("urn:ietf:rfc:5761") // rtcp-mux	
+				connection.disco.addFeature("urn:ietf:rfc:5761") // rtcp-mux
 			}
 			
 	//		connection.rawInput = function (data) { console.log('RECV: ' + data); };
 	//      connection.rawOutput = function (data) { console.log('SEND: ' + data); };
 			
-			var extPresence = Strophe.Builder('nick', {xmlns:'http://jabber.org/protocol/nick', value: userName});
+			var extPresence = Strophe.xmlElement('nick', {xmlns:'http://jabber.org/protocol/nick'}, userName);
 
 			connection.muc.join(roomUrl, userName, OnMessage, OnPresence, null, null, null, extPresence);		
 			connection.muc.groupchat(roomUrl, "Hi");
