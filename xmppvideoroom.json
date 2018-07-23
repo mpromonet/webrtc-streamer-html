@@ -1,5 +1,4 @@
 var xmppRoomConfig = {
 	url: "meet.jit.si",
-	roomId: "testroom",
-	user: "xmppuser"
+	roomId: "testroom"
 }
