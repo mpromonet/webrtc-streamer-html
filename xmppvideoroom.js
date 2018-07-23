@@ -12,6 +12,7 @@ var XMPPVideoRoom = (function() {
 		this.handlers    = [];
 		this.srvurl      = srvurl || location.protocol+"//"+window.location.hostname+":"+window.location.port;
 		this.sessionList = {};
+		this.onConnectCallback = [];
 
 		this.connection = new Strophe.Connection(location.protocol+ "//" + xmppUrl + "/http-bind");
 		this.connection.addHandler(this.OnJingle, 'urn:xmpp:jingle:1', 'iq', 'set', null, null);
@@ -33,9 +34,7 @@ var XMPPVideoRoom = (function() {
 
 		var bind = this;
 		if (this.status === Strophe.Status.CONNECTING) {
-			this.onConnectCallback = function() {
-				bind.connection.muc.join(roomUrl, name, bind.OnMessage, bind.OnPresence, null, null, null, extPresence);		
-			}	
+			this.onConnectCallback.push(function() { bind.connection.muc.join(roomUrl, name, bind.OnMessage, bind.OnPresence, null, null, null, extPresence); } );	
 		} else {
 			bind.connection.muc.join(roomUrl, name, bind.OnMessage, bind.OnPresence, null, null, null, extPresence);		
 		}
@@ -87,7 +86,7 @@ var XMPPVideoRoom = (function() {
 		var id = this.connection.sendIQ(jingleanswer, () => {
 			console.log("============session-accept ok sid:" + sid);
 				
-			var method = "/api/getIceCandidate?peerid="+ sid;
+			var method = this.srvurl + "/api/getIceCandidate?peerid="+ sid;
 			request("GET" , method).done( function (response) { 
 					if (response.statusCode === 200) {
 						this.onReceiveCandidate(jingleanswer.node,JSON.parse(response.body));
@@ -118,7 +117,7 @@ var XMPPVideoRoom = (function() {
 
 			console.log("xmpp offer============sdp:" + sdp.raw);
 			var webrtcStream = document.querySelector('#webrtcStream').value;
-			var method = "/api/call?peerid="+ sid +"&url="+encodeURIComponent(webrtcStream)+"&options="+encodeURIComponent("rtptransport=tcp");
+			var method = this.srvurl + "/api/call?peerid="+ sid +"&url="+encodeURIComponent(webrtcStream)+"&options="+encodeURIComponent("rtptransport=tcp");
 			request("POST" , method, {body:JSON.stringify({type:"offer",sdp:sdp.raw})}).done( function (response) { 
 					if (response.statusCode === 200) {
 						this.onCall(iq,JSON.parse(response.body));
@@ -151,7 +150,7 @@ var XMPPVideoRoom = (function() {
 						var candidate = { candidate:sdp, sdpMid:"", sdpMLineIndex:contentIdx }
 						console.log("send webrtc candidate============:" + JSON.stringify(candidate));
 			
-						var method = "/api/addIceCandidate?peerid="+ sid;
+						var method = this.srvurl + "/api/addIceCandidate?peerid="+ sid;
 						request("POST" , method, { body: JSON.stringify(candidate) }).done( function (response) { 
 								if (response.statusCode === 200) {
 									console.log("method:"+method+ " answer:" +response.body);
@@ -201,8 +200,9 @@ var XMPPVideoRoom = (function() {
 				this.connection.disco.addFeature("urn:ietf:rfc:5761") // rtcp-mux
 			}
 
-			if (this.onConnectCallback) {
-				this.onConnectCallback();
+			while (this.onConnectCallback.length) {
+				var cb = this.onConnectCallback.shift();
+				cb();
 			}
 		}
 		
@@ -216,7 +216,7 @@ var XMPPVideoRoom = (function() {
 				var jingle = param.c('jingle', {xmlns: 'urn:xmpp:jingle:1'});
 				jingle.attrs({ action: "session-terminate",  sid});
 			
-				var method = "/api/hangup?peerid="+ sid;
+				var method = this.srvurl + "/api/hangup?peerid="+ sid;
 				request("GET" , method).done( function (response) { 
 						if (response.statusCode === 200) {
 							console.log("method:"+method+ " answer:" +response.body);
