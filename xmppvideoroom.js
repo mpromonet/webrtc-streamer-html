@@ -9,7 +9,6 @@ var XMPPVideoRoom = (function() {
 	*/
 	var XMPPVideoRoom = function XMPPVideoRoom (xmppUrl, srvurl) {	
 		this.xmppUrl     = xmppUrl;
-		this.handlers    = [];
 		this.srvurl      = srvurl || location.protocol+"//"+window.location.hostname+":"+window.location.port;
 		this.sessionList = {};
 	};
@@ -25,7 +24,7 @@ var XMPPVideoRoom = (function() {
 		var bind = this;
 
 		var connection = new Strophe.Connection(location.protocol+ "//" + this.xmppUrl + "/http-bind");
-		connection.addHandler(function(iq) { return this.OnJingle(connection, iq, url) }, 'urn:xmpp:jingle:1', 'iq', 'set', null, null);
+		connection.addHandler(function(iq) { return bind.OnJingle(connection, iq, url) }, 'urn:xmpp:jingle:1', 'iq', 'set', null, null);
 
 //		connection.rawInput = function (data) { console.log('RECV: ' + data); };
 //		connection.rawOutput = function (data) { console.log('SEND: ' + data); };
@@ -70,13 +69,14 @@ var XMPPVideoRoom = (function() {
 		var id = connection.sendIQ(jingleanswer, () => {
 			console.log("============session-accept ok sid:" + sid);
 				
+			var bind = this;
 			var method = this.srvurl + "/api/getIceCandidate?peerid="+ sid;
 			request("GET" , method).done( function (response) { 
 					if (response.statusCode === 200) {
-						this.onReceiveCandidate(connection, jingleanswer.node, JSON.parse(response.body));
+						bind.onReceiveCandidate(connection, jingleanswer.node, JSON.parse(response.body));
 					}
 					else {
-						this.onError(response.statusCode);
+						bind.onError(response.statusCode);
 					}
 				}
 			);			
@@ -95,6 +95,8 @@ var XMPPVideoRoom = (function() {
 		var sid = jingle.getAttribute("sid");
 		var action = jingle.getAttribute("action");
 
+		var bind = this;
+
 		if (action === "session-initiate") {	
 			var sdp = new SDP('');
 			sdp.fromJingle($(jingle));
@@ -103,10 +105,10 @@ var XMPPVideoRoom = (function() {
 			var method = this.srvurl + "/api/call?peerid="+ sid +"&url="+encodeURIComponent(url)+"&options="+encodeURIComponent("rtptransport=tcp&timeout=60");
 			request("POST" , method, {body:JSON.stringify({type:"offer",sdp:sdp.raw})}).done( function (response) { 
 					if (response.statusCode === 200) {
-						this.onCall(connection, iq, JSON.parse(response.body));
+						bind.onCall(connection, iq, JSON.parse(response.body));
 					}
 					else {
-						this.onError(response.statusCode);
+						bind.onError(response.statusCode);
 					}
 				}
 			);
@@ -138,7 +140,7 @@ var XMPPVideoRoom = (function() {
 									console.log("method:"+method+ " answer:" +response.body);
 								}
 								else {
-									this.onError(response.statusCode);
+									bind.onError(response.statusCode);
 								}
 							}
 						);							
@@ -187,7 +189,7 @@ var XMPPVideoRoom = (function() {
 	}
 		
 	XMPPVideoRoom.prototype.leave = function (roomid, userName) {
-		Object.entries(this.sessionList).forEach( (sid,connection) => {
+		Object.entries(this.sessionList).forEach( ([sid,connection]) => {
 			var roomUrl = roomid + "@" + "conference." + this.xmppUrl;
 
 			var param = $iq({ type: "set",  from: roomUrl +"/" + userName, to: roomUrl })
@@ -195,13 +197,14 @@ var XMPPVideoRoom = (function() {
 			jingle.attrs({ action: "session-terminate",  sid});
 			connection.sendIQ(param);
 
+			var bind = this;
 			var method = this.srvurl + "/api/hangup?peerid="+ sid;
 			request("GET" , method).done( function (response) { 
 					if (response.statusCode === 200) {
 						console.log("method:"+method+ " answer:" +response.body);
 					}
 					else {
-						this.onError(response.statusCode);
+						bind.onError(response.statusCode);
 					}
 				}
 			);					
