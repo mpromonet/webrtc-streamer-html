@@ -193,9 +193,9 @@ var XMPPVideoRoom = (function() {
 			var roomUrl = roomid + "@" + "conference." + this.xmppUrl;
 
 			var param = $iq({ type: "set",  from: roomUrl +"/" + userName, to: roomUrl })
-			var jingle = param.c('jingle', {xmlns: 'urn:xmpp:jingle:1'});
-			jingle.attrs({ action: "session-terminate",  sid});
-			connection.sendIQ(param);
+			var jingle = param.c('jingle', {xmlns: 'urn:xmpp:jingle:1'})
+							.attrs({ action: "session-terminate",  sid});
+			connection.sendIQ(jingle.up());
 
 			var bind = this;
 			var method = this.srvurl + "/api/hangup?peerid="+ sid;
