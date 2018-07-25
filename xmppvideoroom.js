@@ -172,6 +172,7 @@ var XMPPVideoRoom = (function() {
 			if (connection.disco) {
 				connection.disco.addIdentity('client', 'web');
 				connection.disco.addFeature(Strophe.NS.DISCO_INFO);
+				connection.disco.addFeature(Strophe.NS.CAPS);
 				connection.disco.addFeature("urn:xmpp:jingle:1");
 				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:1");
 				connection.disco.addFeature("urn:xmpp:jingle:transports:ice-udp:1");
