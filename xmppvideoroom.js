@@ -142,8 +142,10 @@ var XMPPVideoRoom = (function() {
 		if (action === "session-initiate") {	
 			var sdp = new SDP('');
 			sdp.fromJingle($(jingle));
-
 			console.log("<=== xmpp offer sdp:" + sdp.raw);
+			
+			this.sessionList[sid] = { connection, state: "INIT", earlyCandidates:[] } ;
+
 			var method = this.srvurl + "/api/call?peerid="+ sid +"&url="+encodeURIComponent(url)+"&options="+encodeURIComponent("rtptransport=tcp&timeout=60");
 			request("POST" , method, {body:JSON.stringify({type:"offer",sdp:sdp.raw})}).done( function (response) { 
 					if (response.statusCode === 200) {
@@ -154,9 +156,6 @@ var XMPPVideoRoom = (function() {
 					}
 				}
 			);
-			this.sessionList[sid]=connection;
-			this.sessionList[sid].state = "INIT";
-			this.sessionList[sid].earlyCandidates = [];
 			
 			var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id:iq.getAttribute("id") })
 			connection.sendIQ(ack);		
@@ -236,14 +235,6 @@ var XMPPVideoRoom = (function() {
 				connection.disco.addIdentity('client', 'web');
 				connection.disco.addFeature(Strophe.NS.DISCO_INFO);
 				connection.disco.addFeature(Strophe.NS.CAPS);
-				connection.disco.addFeature("urn:xmpp:jingle:1");
-				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:1");
-				connection.disco.addFeature("urn:xmpp:jingle:transports:ice-udp:1");
-				connection.disco.addFeature("urn:xmpp:jingle:transports:raw-udp:1");
-				connection.disco.addFeature("urn:xmpp:jingle:apps:dtls:0");
-				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:audio");
-				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:video");
-				connection.disco.addFeature("urn:ietf:rfc:5761") // rtcp-mux
 			}
 
 			var roomUrl = roomid + "@" + "conference." + this.xmppUrl;
@@ -253,14 +244,14 @@ var XMPPVideoRoom = (function() {
 	}
 		
 	XMPPVideoRoom.prototype.leave = function (roomid, userName) {
-		Object.entries(this.sessionList).forEach( ([sid,connection]) => {
+		Object.entries(this.sessionList).forEach( ([sid,session]) => {
 			var roomUrl = roomid + "@" + "conference." + this.xmppUrl;
 
 			var iq = $iq({ type: "set",  from: roomUrl +"/" + userName, to: roomUrl })
 							.c('jingle', {xmlns: 'urn:xmpp:jingle:1'})
 								.attrs({ action: "session-terminate",  sid})
 							.up();
-			connection.sendIQ(iq);
+			session.connection.sendIQ(iq);
 
 			var bind = this;
 			var method = this.srvurl + "/api/hangup?peerid="+ sid;
@@ -273,9 +264,9 @@ var XMPPVideoRoom = (function() {
 					}
 				}
 			);					
-			connection.muc.leave(roomUrl, userName);
-			connection.flush();
-			connection.disconnect();	
+			session.connection.muc.leave(roomUrl, userName);
+			session.connection.flush();
+			session.connection.disconnect();	
 		});
 		this.sessionList = {};
 	}
