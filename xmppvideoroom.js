@@ -38,15 +38,39 @@ var XMPPVideoRoom = (function() {
 		var sid = jingle.getAttribute("sid");
 
 		candidateList.forEach(function (candidate) {
-			var json = SDPUtil.parse_icecandidate(candidate.candidate);
-			console.log("webrtc candidate==================" +  JSON.stringify(json));
+			var jsoncandidate = SDPUtil.parse_icecandidate(candidate.candidate);
+			console.log("webrtc candidate==================" +  JSON.stringify(jsoncandidate));
+			// get ufrag
+			var ufrag = "";
+			var elems = candidate.candidate.split(' ');
+			for (var i = 8; i < elems.length; i += 2) {
+				switch (elems[i]) {
+					case 'ufrag':
+						ufrag = elems[i + 1];
+						break;
+				}
+			}
+			// get pwd
+			var pwd = "";
+			var contents = $(jingle).find('>content');
+			contents.each( (contentIdx,content) => {
+				var transports = $(content).find('>transport');
+				transports.each( (idx,transport) => {
+					if (ufrag == transport.getAttribute('ufrag')) {
+						pwd = transport.getAttribute('pwd');
+					}
+				})
+			});
+			
+			// convert candidate from webrtc to jingle 
+			var iq = $iq({ type: "set",  from: iq.getAttribute("to"), to: iq.getAttribute("from") })
+					.c('jingle', {xmlns: 'urn:xmpp:jingle:1'})
+						.attrs({ action: "transport-info",  sid, ufrag, pwd })
+						.c('candidate', jsoncandidate)
+						.up()
+					.up();
 
-			//TODO convert candidate from webrtc to jingle 
-			var param = $iq({ type: "set",  from: iq.getAttribute("to"), to: iq.getAttribute("from") })
-			var jingle = param.c('jingle', {xmlns: 'urn:xmpp:jingle:1'});
-			jingle.attrs({ action: "transport-info",  sid });
-
-			var id = connection.sendIQ(jingle, () => {
+			var id = connection.sendIQ(iq, () => {
 				console.log("============transport-info ok sid:" + sid);		
 			},() => {
 				console.log("############transport-info error sid:" + sid);
@@ -62,18 +86,18 @@ var XMPPVideoRoom = (function() {
 				
 		var sdp = new SDP(data.sdp);
 		var iqAnswer = $iq({ type: "set",  from: iq.getAttribute("to"), to: iq.getAttribute("from") })
-		var jingle = iqAnswer.c('jingle', {xmlns: 'urn:xmpp:jingle:1'});
-		jingle.attrs({ action: "session-accept",  sid, responder:iq.getAttribute("to") });
+		var jingle = iqAnswer.c('jingle', {xmlns: 'urn:xmpp:jingle:1'})
+						.attrs({ action: "session-accept",  sid, responder:iq.getAttribute("to") });
 
-		var jingleanswer = sdp.toJingle(jingle); 
-		var id = connection.sendIQ(jingleanswer, () => {
+		var answer = sdp.toJingle(jingle); 
+		var id = connection.sendIQ(answer, () => {
 			console.log("============session-accept ok sid:" + sid);
 				
 			var bind = this;
 			var method = this.srvurl + "/api/getIceCandidate?peerid="+ sid;
 			request("GET" , method).done( function (response) { 
 					if (response.statusCode === 200) {
-						bind.onReceiveCandidate(connection, jingleanswer.node, JSON.parse(response.body));
+						bind.onReceiveCandidate(connection, answer.node, JSON.parse(response.body));
 					}
 					else {
 						bind.onError(response.statusCode);
@@ -130,7 +154,7 @@ var XMPPVideoRoom = (function() {
 					candidates.each ( (idx,candidate) => {
 						var sdp = SDPUtil.candidateFromJingle(candidate);
 						sdp = sdp.replace("a=candidate","candidate");
-						sdp = sdp.replace("\r\n"," ufrag " + ufrag + "\r\n");
+						sdp = sdp.replace("\r\n"," ufrag " + ufrag);
 						var candidate = { candidate:sdp, sdpMid:"", sdpMLineIndex:contentIdx }
 						console.log("send webrtc candidate============:" + JSON.stringify(candidate));
 			
@@ -193,10 +217,11 @@ var XMPPVideoRoom = (function() {
 		Object.entries(this.sessionList).forEach( ([sid,connection]) => {
 			var roomUrl = roomid + "@" + "conference." + this.xmppUrl;
 
-			var param = $iq({ type: "set",  from: roomUrl +"/" + userName, to: roomUrl })
-			var jingle = param.c('jingle', {xmlns: 'urn:xmpp:jingle:1'})
-							.attrs({ action: "session-terminate",  sid});
-			connection.sendIQ(jingle.up());
+			var iq = $iq({ type: "set",  from: roomUrl +"/" + userName, to: roomUrl })
+							.c('jingle', {xmlns: 'urn:xmpp:jingle:1'})
+								.attrs({ action: "session-terminate",  sid})
+							.up();
+			connection.sendIQ(iq);
 
 			var bind = this;
 			var method = this.srvurl + "/api/hangup?peerid="+ sid;
