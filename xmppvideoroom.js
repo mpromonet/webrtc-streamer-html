@@ -36,10 +36,12 @@ var XMPPVideoRoom = (function() {
 		console.log("============candidateList:" +  JSON.stringify(candidateList));
 		var jingle = iq.querySelector("jingle");
 		var sid = jingle.getAttribute("sid");
+		var from = iq.getAttribute("to");
+		var to = iq.getAttribute("from");
 
 		candidateList.forEach(function (candidate) {
 			var jsoncandidate = SDPUtil.parse_icecandidate(candidate.candidate);
-			console.log("webrtc candidate==================" +  JSON.stringify(jsoncandidate));
+			console.log("<=== webrtc candidate:" +  JSON.stringify(jsoncandidate));
 			// get ufrag
 			var ufrag = "";
 			var elems = candidate.candidate.split(' ');
@@ -63,7 +65,7 @@ var XMPPVideoRoom = (function() {
 			});
 			
 			// convert candidate from webrtc to jingle 
-			var iq = $iq({ type: "set",  from: iq.getAttribute("to"), to: iq.getAttribute("from") })
+			var iq = $iq({ type: "set",  from, to })
 					.c('jingle', {xmlns: 'urn:xmpp:jingle:1'})
 						.attrs({ action: "transport-info",  sid, ufrag, pwd })
 						.c('candidate', jsoncandidate)
@@ -71,7 +73,7 @@ var XMPPVideoRoom = (function() {
 					.up();
 
 			var id = connection.sendIQ(iq, () => {
-				console.log("============transport-info ok sid:" + sid);		
+				console.log("===> xmpp transport-info ok sid:" + sid);		
 			},() => {
 				console.log("############transport-info error sid:" + sid);
 			});
@@ -79,10 +81,26 @@ var XMPPVideoRoom = (function() {
 	}
 
 	XMPPVideoRoom.prototype.onCall = function(connection, iq, data) {
-		console.log("webrtc answer========================" + data.sdp);		
+		console.log("<=== webrtc answer sdp:" + data.sdp);		
 		
 		var jingle = iq.querySelector("jingle");
 		var sid = jingle.getAttribute("sid");
+		
+		this.sessionList[sid].state = "UP";
+		var earlyCandidates = this.sessionList[sid].earlyCandidates;
+		while (earlyCandidates.length) {
+				var candidate = earlyCandidates.shift();
+				var method = this.srvurl + "/api/addIceCandidate?peerid="+ sid;
+				request("POST" , method, { body: JSON.stringify(candidate) }).done( function (response) { 
+						if (response.statusCode === 200) {
+							console.log("method:"+method+ " answer:" +response.body);
+						}
+						else {
+							bind.onError(response.statusCode);
+						}
+					}
+				);	
+		}
 				
 		var sdp = new SDP(data.sdp);
 		var iqAnswer = $iq({ type: "set",  from: iq.getAttribute("to"), to: iq.getAttribute("from") })
@@ -91,7 +109,7 @@ var XMPPVideoRoom = (function() {
 
 		var answer = sdp.toJingle(jingle); 
 		var id = connection.sendIQ(answer, () => {
-			console.log("============session-accept ok sid:" + sid);
+			console.log("===> xmpp session-accept ok sid:" + sid);
 				
 			var bind = this;
 			var method = this.srvurl + "/api/getIceCandidate?peerid="+ sid;
@@ -125,7 +143,7 @@ var XMPPVideoRoom = (function() {
 			var sdp = new SDP('');
 			sdp.fromJingle($(jingle));
 
-			console.log("xmpp offer============sdp:" + sdp.raw);
+			console.log("<=== xmpp offer sdp:" + sdp.raw);
 			var method = this.srvurl + "/api/call?peerid="+ sid +"&url="+encodeURIComponent(url)+"&options="+encodeURIComponent("rtptransport=tcp&timeout=60");
 			request("POST" , method, {body:JSON.stringify({type:"offer",sdp:sdp.raw})}).done( function (response) { 
 					if (response.statusCode === 200) {
@@ -137,13 +155,15 @@ var XMPPVideoRoom = (function() {
 				}
 			);
 			this.sessionList[sid]=connection;
+			this.sessionList[sid].state = "INIT";
+			this.sessionList[sid].earlyCandidates = [];
 			
 			var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id:iq.getAttribute("id") })
 			connection.sendIQ(ack);		
 
 		} else if (action === "transport-info") {
 
-			console.log("xmpp candidate============sid:" + sid);
+			console.log("<=== xmpp candidate sid:" + sid);
 
 			var contents = $(jingle).find('>content');
 			contents.each( (contentIdx,content) => {
@@ -156,24 +176,43 @@ var XMPPVideoRoom = (function() {
 						sdp = sdp.replace("a=candidate","candidate");
 						sdp = sdp.replace("\r\n"," ufrag " + ufrag);
 						var candidate = { candidate:sdp, sdpMid:"", sdpMLineIndex:contentIdx }
-						console.log("send webrtc candidate============:" + JSON.stringify(candidate));
+						console.log("===> webrtc candidate :" + JSON.stringify(candidate));
 			
-						var method = this.srvurl + "/api/addIceCandidate?peerid="+ sid;
-						request("POST" , method, { body: JSON.stringify(candidate) }).done( function (response) { 
-								if (response.statusCode === 200) {
-									console.log("method:"+method+ " answer:" +response.body);
+						if (this.sessionList[sid].state == "INIT") {
+							this.sessionList[sid].earlyCandidates.push(candidate);
+						} else {
+							var method = this.srvurl + "/api/addIceCandidate?peerid="+ sid;
+							request("POST" , method, { body: JSON.stringify(candidate) }).done( function (response) { 
+									if (response.statusCode === 200) {
+										console.log("method:"+method+ " answer:" +response.body);
+									}
+									else {
+										bind.onError(response.statusCode);
+									}
 								}
-								else {
-									bind.onError(response.statusCode);
-								}
-							}
-						);							
+							);			
+						}							
 					});
 				});
 			});
 	
 			var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id:iq.getAttribute("id") })
 			connection.sendIQ(ack);		
+		} else if (action === "session-terminate") {			
+			console.log("<=== xmpp session-terminate sid:" + sid);
+
+			var method = this.srvurl + "/api/hangup?peerid="+ sid;
+			request("GET" , method).done( function (response) { 
+					if (response.statusCode === 200) {
+						console.log("method:"+method+ " answer:" +response.body);
+					}
+					else {
+						bind.onError(response.statusCode);
+					}
+				}
+			);		
+			var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id:iq.getAttribute("id") })
+			connection.sendIQ(ack);					
 		}
 					
 		return true;		
