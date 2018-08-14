@@ -1,15 +1,3 @@
-const serverUrl = xmppRoomConfig.url;
-const roomName = xmppRoomConfig.roomId;
-const options = {
-    hosts: {
-        domain: serverUrl,
-        muc: 'conference.' + serverUrl 
-    },
-    bosh: '//' + serverUrl + '/http-bind',
-
-    clientNode: 'http://jitsi.org/jitsimeet'
-};
-
 let connection = null;
 let room = null;
 
@@ -76,6 +64,8 @@ function onUserLeft(id) {
  * That function is called when connection is established successfully
  */
 function onConnectionSuccess() {
+	const roomName = connection.roomName;
+
     room = connection.initJitsiConference(roomName, {});
     room.on(JitsiMeetJS.events.conference.TRACK_ADDED, onRemoteTrack);
     room.on(JitsiMeetJS.events.conference.TRACK_REMOVED, track => {
@@ -112,19 +102,27 @@ function disconnect() {
 /**
  *
  */
-function unload() {
+function leave() {
     room.leave();
     connection.disconnect();
 }
 
-$(window).bind('beforeunload', unload);
-$(window).bind('unload', unload);
-
-function load() {
+function join(serverUrl, roomName) {
 	JitsiMeetJS.setLogLevel(JitsiMeetJS.logLevels.INFO);
 	JitsiMeetJS.init({});
 
+	const options = {
+		hosts: {
+			domain: serverUrl,
+			muc: 'conference.' + serverUrl 
+		},
+		bosh: '//' + serverUrl + '/http-bind',
+
+		clientNode: 'http://jitsi.org/jitsimeet'
+	};
+
 	connection = new JitsiMeetJS.JitsiConnection(null, null, options);
+	connection.roomName = roomName;
 
 	connection.addEventListener(JitsiMeetJS.events.connection.CONNECTION_ESTABLISHED, onConnectionSuccess);
 	connection.addEventListener(JitsiMeetJS.events.connection.CONNECTION_FAILED, onConnectionFailed);

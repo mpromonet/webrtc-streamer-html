@@ -11,7 +11,27 @@
     <script src="jitsiroom.js" ></script>
 </head>
 <body>
+	XMPP Url:<input id="xmppServer" type="text" size="50" /> 
+	Room id:<input id="xmppRoom" type="text" /><br/>
     <a href="#" onclick="load()">Load</a>
     <a href="#" onclick="unload()">Unload</a><br/>
 </body>
+<script>
+	// set default value
+	document.querySelector('#xmppServer').value  = xmppRoomConfig.url;
+	document.querySelector('#xmppRoom').value = xmppRoomConfig.roomId;
+
+	function load() {
+		var serverName = document.querySelector('#xmppServer').value;
+		var roomName = document.querySelector('#xmppRoom').value;
+		join(serverName, roomName);
+	}
+	function unload() {
+		leave();
+	}
+	
+	$(window).bind('beforeunload', unload);
+	$(window).bind('unload', unload);
+
+</script>
 </html>
