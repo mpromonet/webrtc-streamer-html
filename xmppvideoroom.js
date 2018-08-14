@@ -36,7 +36,6 @@ var XMPPVideoRoom = (function() {
 				connection.disco.addFeature("urn:xmpp:jingle:1");	
 				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:1");	
 				connection.disco.addFeature("urn:xmpp:jingle:transports:ice-udp:1");	
-				connection.disco.addFeature("urn:xmpp:jingle:transports:raw-udp:1");	
 				connection.disco.addFeature("urn:xmpp:jingle:apps:dtls:0");	
 				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:audio");	
 				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:video");	
@@ -151,10 +150,14 @@ var XMPPVideoRoom = (function() {
 		var jingle = iq.querySelector("jingle");
 		var sid = jingle.getAttribute("sid");
 		var action = jingle.getAttribute("action");
+		var id = iq.getAttribute("id");
 
 		var bind = this;
 
 		if (action === "session-initiate") {	
+			var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id })
+			connection.sendIQ(ack);		
+			
 			var sdp = new SDP('');
 			sdp.fromJingle($(jingle));
 			console.log("<=== xmpp offer sdp:" + sdp.raw);
@@ -172,12 +175,12 @@ var XMPPVideoRoom = (function() {
 				}
 			);
 			
-			var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id:iq.getAttribute("id") })
-			connection.sendIQ(ack);		
-
 		} else if (action === "transport-info") {
 
 			console.log("<=== xmpp candidate sid:" + sid);
+			
+			var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id })
+			connection.sendIQ(ack);		
 
 			var contents = $(jingle).find('>content');
 			contents.each( (contentIdx,content) => {
@@ -210,10 +213,11 @@ var XMPPVideoRoom = (function() {
 				});
 			});
 	
-			var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id:iq.getAttribute("id") })
-			connection.sendIQ(ack);		
 		} else if (action === "session-terminate") {			
-			console.log("<=== xmpp session-terminate sid:" + sid);
+			console.log("<=== xmpp session-terminate sid:" + sid + " reason:" + jingle.querySelector("reason").textContent);
+
+			var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id })
+			connection.sendIQ(ack);		
 
 			var method = this.srvurl + "/api/hangup?peerid="+ sid;
 			request("GET" , method).done( function (response) { 
@@ -225,8 +229,6 @@ var XMPPVideoRoom = (function() {
 					}
 				}
 			);		
-			var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id:iq.getAttribute("id") })
-			connection.sendIQ(ack);					
 		}
 					
 		return true;		
