@@ -18,8 +18,7 @@ function onRemoteTrack(track) {
     }
     const idx = remoteTracks[participant].push(track);
 
-    track.addEventListener(JitsiMeetJS.events.track.LOCAL_TRACK_STOPPED, 
-					() => console.log('remote track stoped'));
+    track.addEventListener(JitsiMeetJS.events.track.LOCAL_TRACK_STOPPED, () => console.log('remote track stoped'));
  
 	const id = participant + track.getType() + idx;
     if (track.getType() === 'video') {
@@ -52,12 +51,11 @@ function onUserLeft(id) {
 	
     for (let i = 0; i < tracks.length; i++) {
         tracks[i].detach($(`#${id}${tracks[i].getType()}`));
-		
-		if (tracks[i].getType() === 'video') {
-			const idx = i+1;
-			$(`#${id}video${idx}`).remove();
-		}
+		const idx = i+1;
+		$(`#${id}video${idx}`).remove();
+		tracks[i].dispose();
     }
+	delete remoteTracks[id];
 }
 
 /**
@@ -75,6 +73,7 @@ function onConnectionSuccess() {
     room.on(JitsiMeetJS.events.conference.USER_JOINED, id => {
         console.log('user join id:' + id);
         remoteTracks[id] = [];
+		remoteTracks[id].length = 0;
     });
     room.on(JitsiMeetJS.events.conference.USER_LEFT, onUserLeft);
     room.on(JitsiMeetJS.events.conference.DISPLAY_NAME_CHANGED,
@@ -103,7 +102,10 @@ function disconnect() {
  *
  */
 function leave() {
-    room.leave();
+	if (room) {
+		room.leave();
+		room = null;
+	}
     connection.disconnect();
 }
 
