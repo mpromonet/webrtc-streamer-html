@@ -271,6 +271,7 @@ WebRtcStreamer.prototype.onReceiveCandidate = function(dataJson) {
 				, function()      { console.log ("addIceCandidate OK"); }
 				, function(error) { console.log ("addIceCandidate error:" + JSON.stringify(error)); } );
 		}
+		this.pc.addIceCandidate();
 	}
 }
 
