@@ -28,7 +28,22 @@ var XMPPVideoRoom = (function() {
 
 //		connection.rawInput = function (data) { console.log('RECV: ' + data); };
 //		connection.rawOutput = function (data) { console.log('SEND: ' + data); };
-
+			// disco stuff
+			if (connection.disco) {
+				connection.disco.addIdentity('client', 'http://jitsi.org/jitsimeet');
+				connection.disco.addFeature(Strophe.NS.DISCO_INFO);
+				connection.disco.addFeature(Strophe.NS.CAPS);
+				connection.disco.addFeature("urn:xmpp:jingle:1");	
+				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:1");	
+				connection.disco.addFeature("urn:xmpp:jingle:transports:ice-udp:1");	
+				connection.disco.addFeature("urn:xmpp:jingle:transports:raw-udp:1");	
+				connection.disco.addFeature("urn:xmpp:jingle:apps:dtls:0");	
+				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:audio");	
+				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:video");	
+				connection.disco.addFeature("urn:ietf:rfc:5761")
+				connection.disco.addFeature("urn:ietf:rfc:5888"); // a=group, e.g. bundle
+ 				
+			}
 		connection.connect(this.xmppUrl, null, function(status) { bind.onConnect(connection, roomid, name, status); });
 	}
 
@@ -230,12 +245,7 @@ var XMPPVideoRoom = (function() {
 	    } else if (status === Strophe.Status.CONNECTED) {
 			console.log('Strophe is connected.');
 			
-			// disco stuff
-			if (connection.disco) {
-				connection.disco.addIdentity('client', 'web');
-				connection.disco.addFeature(Strophe.NS.DISCO_INFO);
-				connection.disco.addFeature(Strophe.NS.CAPS);
-			}
+
 
 			var roomUrl = roomid + "@" + "conference." + this.xmppUrl;
 			var extPresence = Strophe.xmlElement('nick', {xmlns:'http://jabber.org/protocol/nick'}, name);
