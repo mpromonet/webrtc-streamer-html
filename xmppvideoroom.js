@@ -257,9 +257,16 @@ var XMPPVideoRoom = (function() {
 			
 
 
-			var roomUrl = roomid + "@" + "conference." + this.xmppUrl;
+			var roomUrl = roomid + "@" + "conference." + this.xmppUrl;			
 			var extPresence = Strophe.xmlElement('nick', {xmlns:'http://jabber.org/protocol/nick'}, name);
-			connection.muc.join(roomUrl, name, null, null, null, null, null, extPresence);		
+			connection.muc.join(roomUrl, name, null, null, null, null, null, extPresence);	
+			
+			connection.muc.queryOccupants(roomUrl, (answer) => {
+				var contents = $(answer).find('>query>item').toArray();
+				contents.forEach( (item) => {
+					console.log("===> occupant jid:" + item.getAttribute("jid") + " name:" +item.getAttribute("name"));
+				})
+			});
 		}
 	}
 		
