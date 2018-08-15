@@ -228,7 +228,15 @@ var XMPPVideoRoom = (function() {
 						bind.onError(response.statusCode);
 					}
 				}
-			);		
+			);
+		} else if (action === "source-add") {			
+			console.log("<=== xmpp source-add sid:" + sid);	
+			var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id })
+			connection.sendIQ(ack);					
+		} else if (action === "source-remove") {			
+			console.log("<=== xmpp source-remove sid:" + sid);	
+			var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id })
+			connection.sendIQ(ack);					
 		}
 					
 		return true;		
