@@ -58,6 +58,12 @@ function onUserLeft(id) {
 	delete remoteTracks[id];
 }
 
+function onUserJoined(id) {
+    console.log('user joined id:' + id);
+	remoteTracks[id] = [];
+	remoteTracks[id].length = 0;	
+}
+
 /**
  * That function is called when connection is established successfully
  */
@@ -70,14 +76,9 @@ function onConnectionSuccess() {
         console.log(`track removed!!!${track}`);
     });
     room.on(JitsiMeetJS.events.conference.CONFERENCE_JOINED, onConferenceJoined);
-    room.on(JitsiMeetJS.events.conference.USER_JOINED, id => {
-        console.log('user join id:' + id);
-        remoteTracks[id] = [];
-		remoteTracks[id].length = 0;
-    });
+    room.on(JitsiMeetJS.events.conference.USER_JOINED, onUserJoined);
     room.on(JitsiMeetJS.events.conference.USER_LEFT, onUserLeft);
-    room.on(JitsiMeetJS.events.conference.DISPLAY_NAME_CHANGED,
-        (userID, displayName) => console.log(`${userID} - ${displayName}`));
+
     room.join();
 }
 
