@@ -50,9 +50,9 @@ function onUserLeft(id) {
 	const tracks = remoteTracks[id];
 	
     for (let i = 0; i < tracks.length; i++) {
-        tracks[i].detach($(`#${id}${tracks[i].getType()}`));
 		const idx = i+1;
-		$(`#${id}video${idx}`).remove();
+        tracks[i].detach($(`#${id}${tracks[i].getType()}${idx}`));
+		$(`#${id}${tracks[i].getType()}${idx}`).remove();
 		tracks[i].dispose();
     }
 	delete remoteTracks[id];
