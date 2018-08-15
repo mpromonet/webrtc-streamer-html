@@ -9,41 +9,87 @@
 <script src="libs/request.min.js"></script>
 <script src="xmppvideoroom.js" ></script>
 <script src="xmppvideoroom.json" ></script>
+<script src="webrtcstreamer.json" ></script>
+<link rel="stylesheet" type="text/css" href="styles.css">
 </head>
 <body> 
 	XMPP Url:<input id="xmppServer" type="text" size="50" /> 
 	Room id:<input id="xmppRoom" type="text" />
-	User id:<input id="xmppUser" type="text" value="webuser" /><br/>
-	WebRTC stream:<input id="webrtcStream" type="text" size="50" value="rtsp://217.17.220.110/axis-media/media.amp" />
-	<input type="button" value="connect" onclick="connect()" />
-	<input type="button" value="disconnect" onclick="disconnect()" />
+	<nav id="menu"></nav>
 </body>
 <script>
 	// set default value
 	document.querySelector('#xmppServer').value  = xmppRoomConfig.url;
 	document.querySelector('#xmppRoom').value = xmppRoomConfig.roomId;
 		
-	var serverName = null;
-	var userName = null;	
-	var roomName = null;
-	var xmpp = null;
+	// ------------------------------------------
+	// XMPP connections
+	// ------------------------------------------	
+	var XMPPServerList = [];
 	
-	function connect() {	
-		serverName = document.querySelector('#xmppServer').value;
-		userName = document.querySelector('#xmppUser').value;	
-		roomName = document.querySelector('#xmppRoom').value;
+	function getText(url) {
+		var text;
+		if (url.video) {
+			text = url.video + " ";
+		}
+		if (url.audio) {
+			text += url.audio + " ";
+		}
+		return text;
+	}		
+	// ------------------------------------------
+	// init device list 
+	// ------------------------------------------	
+	function onGetDeviceList(remoteDeviceList) {
+		var deviceList = [];
+		if (remoteDeviceList) {
+			deviceList.push.apply( deviceList, remoteDeviceList );
+		}
 
-		var webrtcStream = document.querySelector('#webrtcStream').value;
+		// create navigation menu
+		var urllist = document.getElementById("menu");
+		for (var dev in deviceList) {
+			var url = deviceList[dev];
+			var option = document.createElement("a");
+			var videoTag = "video_" + JSON.stringify(url);
+			option.url = url;
+			option.text = getText(url);
+			option.id   = "nav_" + videoTag;
+			option.onclick = function () { 
+				if (this.className === "active") {
+					disconnect(this.url.video); 
+					var navElt = 	document.getElementById (this.id);
+					navElt.className = "";							
+				} else {
+					connect(this.url.video); 
+					var navElt = 	document.getElementById (this.id);
+					navElt.className = "active";							
+				}
+			}
+			urllist.appendChild(option);
+		}		
+	}		
+	request("GET" , webrtcConfig.url + "/api/getMediaList").done( function (response) { 
+		onGetDeviceList( JSON.parse(response.body));
+	});
+		
+	var serverName = null;	
+	var roomName = null;
 	
-		xmpp = new XMPPVideoRoom(serverName, null);
-		xmpp.join(roomName, webrtcStream, userName);
+	function connect(webrtcStream) {	
+		serverName = document.querySelector('#xmppServer').value;
+		roomName = document.querySelector('#xmppRoom').value;
+	
+		var xmpp = new XMPPVideoRoom(serverName, webrtcConfig.url);
+		xmpp.join(roomName, webrtcStream, webrtcStream);
+		XMPPServerList.push(xmpp);
 	}
 	
-	function disconnect() {
-		if (xmpp) {
-			xmpp.leave(roomName, userName);
-		}
-		xmpp = null;
+	function disconnect(webrtcStream) {
+		XMPPServerList.forEach( (xmpp) => {
+			xmpp.leave(roomName, webrtcStream);
+		});
+		XMPPServerList.length = 0;
 	}
 	
 	window.onbeforeunload = function() { 
