@@ -6,7 +6,7 @@
     <script src="libs/jquery-1.12.4.min.js"></script>
     <script src="libs/strophe.min.js"></script>
     <script src="libs/strophe.disco.min.js"></script>
-    <script src="libs/lib-jitsi-meet.min.js"></script>
+    <script src="libs/lib-jitsi-meet.js"></script>
 	<script src="xmppvideoroom.json" ></script>
     <script src="jitsiroom.js" ></script>
 </head>
@@ -14,7 +14,9 @@
 	XMPP Url:<input id="xmppServer" type="text" size="50" /> 
 	Room id:<input id="xmppRoom" type="text" /><br/>
     <a href="#" onclick="load()">Load</a>
-    <a href="#" onclick="unload()">Unload</a><br/>
+	<a href="#" onclick="unload()">Unload</a><br/>
+	<a href="#" onclick="kick()">kick</a><br/>
+	<div id="participants"></div>
 </body>
 <script>
 	// set default value
@@ -29,7 +31,24 @@
 	function unload() {
 		leave();
 	}
+	function kick() {
+		kickParticipants();
+	}	
+	function write(text) {
+		var textNode = document.createTextNode(text);
+		document.querySelector('#participants').appendChild(textNode);		
+		var textNode = document.createElement("br");		
+		document.querySelector('#participants').appendChild(textNode);		
+	}
+	function list() {
+		document.querySelector('#participants').innerHTML = "";
 	
+		var participants = getParticipants() || [];
+		participants.forEach( (item) => {
+			write(item._id);
+		});
+	}		
+	setInterval(() => list(),1000);
 	$(window).bind('beforeunload', unload);
 	$(window).bind('unload', unload);
 

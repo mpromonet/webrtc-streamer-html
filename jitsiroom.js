@@ -12,7 +12,8 @@ function onRemoteTrack(track) {
         return;
     }
     const participant = track.getParticipantId();
-
+    console.log('onRemoteTrack participant:' + participant);
+	
     if (!remoteTracks[participant]) {
         remoteTracks[participant] = [];
     }
@@ -29,13 +30,6 @@ function onRemoteTrack(track) {
             `<audio autoplay='1' id='${participant}audio${idx}' />`);
     }
     track.attach($(`#${id}`)[0]);
-}
-
-/**
- * That function is executed when the conference is joined
- */
-function onConferenceJoined() {
-    console.log('conference joined!');
 }
 
 /**
@@ -71,13 +65,14 @@ function onConnectionSuccess() {
 	const roomName = connection.roomName;
 
     room = connection.initJitsiConference(roomName, {});
+	
+    room.on(JitsiMeetJS.events.conference.USER_JOINED, onUserJoined);
+    room.on(JitsiMeetJS.events.conference.USER_LEFT, onUserLeft);
+	
     room.on(JitsiMeetJS.events.conference.TRACK_ADDED, onRemoteTrack);
     room.on(JitsiMeetJS.events.conference.TRACK_REMOVED, track => {
         console.log(`track removed!!!${track}`);
     });
-    room.on(JitsiMeetJS.events.conference.CONFERENCE_JOINED, onConferenceJoined);
-    room.on(JitsiMeetJS.events.conference.USER_JOINED, onUserJoined);
-    room.on(JitsiMeetJS.events.conference.USER_LEFT, onUserLeft);
 
     room.join();
 }
@@ -108,6 +103,23 @@ function leave() {
 		room = null;
 	}
     connection.disconnect();
+}
+
+function kickParticipants() {
+    if (room) {
+        room.getParticipants().forEach( (item) => {
+            console.log("kick:" + item._id)
+            room.kickParticipant(item._id);
+        });
+    }    
+}
+
+function getParticipants() {
+    var participants = null;
+    if (room) {
+        participants = room.getParticipants();
+    }    
+    return participants;
 }
 
 function join(serverUrl, roomName) {
