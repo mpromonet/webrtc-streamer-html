@@ -7,20 +7,25 @@
 <script src="libs/strophe.jingle.sdp.js"></script>
 <script src="libs/jquery-1.12.4.min.js"></script>
 <script src="libs/request.min.js" ></script>
+<script src="libs/EventEmitter.min.js" ></script>
 <script src="xmppvideoroom.js" ></script>
 <script src="xmppvideoroom.json" ></script>
-<script>        
-	
-	var xmpp = new XMPPVideoRoom(xmppRoomConfig.url, null);
-	xmpp.join(xmppRoomConfig.roomId, "rtsp://217.17.220.110/axis-media/media.amp","Norway");
-	xmpp.join(xmppRoomConfig.roomId, " rtsp://184.72.239.149/vod/mp4:BigBuckBunny_175k.mov","Bunny");
+</head>
+<body></body>
+<script>   
+	function writeStatus(name, status) {
+		var textNode = document.createElement("h3");
+		textNode.innerHTML = name + " " + status;
+		document.body.appendChild(textNode);
+	}
+	var bus = new EventEmitter();
+	bus.addListener('state', writeStatus);
+	var xmpp = new XMPPVideoRoom(xmppRoomConfig.url, null, bus);
+	xmpp.join(xmppRoomConfig.roomId, "rtsp://184.72.239.149/vod/mp4:BigBuckBunny_175k.mov","Bunny");
 	
 	window.onbeforeunload = function() { 
-		xmpp.leave(xmppRoomConfig.roomId, "Norway");
-		xmpp.leave(xmppRoomConfig.roomId, "Bunny");
-	};	
-
+			xmpp.leave(xmppRoomConfig.roomId, "Bunny");
+	};
 </script>
-</head>
 </html>
 

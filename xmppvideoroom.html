@@ -15,6 +15,7 @@
 <body> 
 	XMPP Url:<input id="xmppServer" type="text" size="50" /> 
 	Room id:<input id="xmppRoom" type="text" />
+	<input type="button" onclick="openroom()" value="OpenRoom" />
 	<nav id="menu"></nav>
 </body>
 <script>
@@ -92,6 +93,12 @@
 		XMPPServerList.length = 0;
 	}
 	
+	function openroom() {
+		var serverName = document.querySelector('#xmppServer').value;
+		var roomName = document.querySelector('#xmppRoom').value;		
+		window.open( location.protocol + "//" + serverName + "/" + roomName);
+	}
+
 	window.onbeforeunload = function() { 
 		disconnect();
 	};		
