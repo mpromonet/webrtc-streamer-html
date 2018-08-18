@@ -9,7 +9,7 @@ var XMPPVideoRoom = (function() {
 	*/
 	var XMPPVideoRoom = function XMPPVideoRoom (xmppUrl, srvurl, bus) {	
 		this.xmppUrl     = xmppUrl;
-		this.srvurl      = srvurl || location.protocol+"//"+window.location.hostname+":"+window.location.port;
+		this.srvurl      = srvurl || "https://"+window.location.hostname+":"+window.location.port;
 		this.sessionList = {};
 		this.bus = bus;
 	};
@@ -24,11 +24,11 @@ var XMPPVideoRoom = (function() {
 	XMPPVideoRoom.prototype.join = function(roomid, url, name) {
 		var bind = this;
 
-		var connection = new Strophe.Connection(location.protocol+ "//" + this.xmppUrl + "/http-bind");
+		var connection = new Strophe.Connection("https://" + this.xmppUrl + "/http-bind");
 		connection.addHandler(function(iq) { return bind.OnJingle(connection, iq, url) }, 'urn:xmpp:jingle:1', 'iq', 'set', null, null);
 		connection.roomid = roomid;
 		connection.name = name;
-		this.emit('state', connection.roomid + '/' + connection.name, "joining");
+		this.emit(connection.roomid + '/' + connection.name, "joining");
 
 //		connection.rawInput = function (data) { console.log('RECV: ' + data); };
 //		connection.rawOutput = function (data) { console.log('SEND: ' + data); };
@@ -96,7 +96,7 @@ var XMPPVideoRoom = (function() {
 
 		var id = connection.sendIQ(answer, () => {
 			console.log("===> xmpp session-accept ok sid:" + sid);
-			this.emit('state', connection.roomid + '/' + connection.name, "published");			
+			this.emit(connection.roomid + '/' + connection.name, "published");			
 		},() => {
 			console.log("############session-accept error sid:" + sid);
 		});
@@ -171,8 +171,9 @@ var XMPPVideoRoom = (function() {
 			console.log("<=== xmpp offer sid:" + sid + " resource:" + resource);
 
 			if (!isP2P) {
-				this.emit('state', connection.roomid + '/' + connection.name, "publishing");
+				this.emit(connection.roomid + '/' + connection.name, "publishing");
 
+				console.log("<=== jingle:" + JSON.stringify(jingle.node));
 				var sdp = new SDP('');
 				sdp.fromJingle($(jingle));
 				
@@ -230,17 +231,21 @@ var XMPPVideoRoom = (function() {
 		} else if (action === "session-terminate") {			
 			connection.sendIQ(ack);		
 			console.log("<=== xmpp session-terminate sid:" + sid + " reason:" + jingle.querySelector("reason").textContent);
+			if (this.sessionList[sid]) {
+				var method = this.srvurl + "/api/hangup?peerid="+ sid;
+				request("GET" , method).done( function (response) { 
+						if (response.statusCode === 200) {
+							console.log("method:"+method+ " answer:" +response.body);
+						}
+						else {
+							bind.onError(response.statusCode);
+						}
+					}
+				);
 
-			var method = this.srvurl + "/api/hangup?peerid="+ sid;
-			request("GET" , method).done( function (response) { 
-					if (response.statusCode === 200) {
-						console.log("method:"+method+ " answer:" +response.body);
-					}
-					else {
-						bind.onError(response.statusCode);
-					}
-				}
-			);
+				delete this.sessionList[sid];
+			}
+
 		} else if (action === "source-add") {			
 			connection.sendIQ(ack);					
 			console.log("<=== xmpp source-add sid:" + sid);	
@@ -291,27 +296,23 @@ var XMPPVideoRoom = (function() {
 			var extPresence = Strophe.xmlElement('nick', {xmlns:'http://jabber.org/protocol/nick'}, name);
 			connection.muc.join(roomUrl, name, null, this.OnPresence.bind(this), null, null, null, extPresence);	
 			
-			connection.muc.queryOccupants(roomUrl, (answer) => {
-				var contents = $(answer).find('>query>item').toArray();
-				contents.forEach( (item) => {
-					console.log("===> occupant jid:" + item.getAttribute("jid") + " name:" +item.getAttribute("name"));
-				})
-			});
-
-			this.emit('state', connection.roomid + '/' + connection.name, "joined");
+			this.emit(connection.roomid + '/' + connection.name, "joined");
 		}
 	}
 		
-	XMPPVideoRoom.prototype.leave = function (roomid, userName) {
+	XMPPVideoRoom.prototype.leave = function () {
 		Object.entries(this.sessionList).forEach( ([sid,session]) => {
-			var roomUrl = roomid + "@" + "conference." + this.xmppUrl;
+			this.emit(session.connection.roomid + '/' + session.connection.name, "leaving");
 
-			var iq = $iq({ type: "set",  from: roomUrl +"/" + userName, to: roomUrl })
+			var roomUrl = session.connection.roomid + "@" + "conference." + this.xmppUrl;
+			// close jingle session
+			var iq = $iq({ type: "set",  from: roomUrl +"/" + session.connection.name, to: roomUrl })
 							.c('jingle', {xmlns: 'urn:xmpp:jingle:1'})
 								.attrs({ action: "session-terminate",  sid})
 							.up();
 			session.connection.sendIQ(iq);
 
+			// close WebRTC session
 			var bind = this;
 			var method = this.srvurl + "/api/hangup?peerid="+ sid;
 			request("GET" , method).done( function (response) { 
@@ -323,9 +324,10 @@ var XMPPVideoRoom = (function() {
 					}
 				}
 			);					
-			session.connection.muc.leave(roomUrl, userName);
+			session.connection.muc.leave(roomUrl, session.connection.name);
 			session.connection.flush();
 			session.connection.disconnect();	
+			this.emit(session.connection.roomid + '/' + session.connection.name, "leaved");
 		});
 		this.sessionList = {};
 	}
