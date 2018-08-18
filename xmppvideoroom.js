@@ -28,21 +28,21 @@ var XMPPVideoRoom = (function() {
 
 //		connection.rawInput = function (data) { console.log('RECV: ' + data); };
 //		connection.rawOutput = function (data) { console.log('SEND: ' + data); };
-			// disco stuff
-			if (connection.disco) {
-				connection.disco.addIdentity('client', 'http://jitsi.org/jitsimeet');
-				connection.disco.addFeature(Strophe.NS.DISCO_INFO);
-				connection.disco.addFeature(Strophe.NS.CAPS);
-				connection.disco.addFeature("urn:xmpp:jingle:1");	
-				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:1");	
-				connection.disco.addFeature("urn:xmpp:jingle:transports:ice-udp:1");	
-				connection.disco.addFeature("urn:xmpp:jingle:apps:dtls:0");	
-				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:audio");	
-				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:video");	
-				connection.disco.addFeature("urn:ietf:rfc:5761")
-				connection.disco.addFeature("urn:ietf:rfc:5888"); // a=group, e.g. bundle
- 				
-			}
+		// disco stuff
+		if (connection.disco) {
+			connection.disco.addIdentity('client', 'http://jitsi.org/jitsimeet');
+			connection.disco.addFeature(Strophe.NS.DISCO_INFO);
+			connection.disco.addFeature(Strophe.NS.CAPS);
+			connection.disco.addFeature("urn:xmpp:jingle:1");	
+			connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:1");	
+			connection.disco.addFeature("urn:xmpp:jingle:transports:ice-udp:1");	
+			connection.disco.addFeature("urn:xmpp:jingle:apps:dtls:0");	
+			connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:audio");	
+			connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:video");	
+			connection.disco.addFeature("urn:ietf:rfc:5761")
+			connection.disco.addFeature("urn:ietf:rfc:5888"); // a=group, e.g. bundle
+			
+		}
 		connection.connect(this.xmppUrl, null, function(status) { bind.onConnect(connection, roomid, name, status); });
 	}
 
@@ -68,14 +68,11 @@ var XMPPVideoRoom = (function() {
 			}
 			// get pwd
 			var pwd = "";
-			var contents = $(jingle).find('>content');
-			contents.each( (contentIdx,content) => {
-				var transports = $(content).find('>transport');
-				transports.each( (idx,transport) => {
-					if (ufrag == transport.getAttribute('ufrag')) {
-						pwd = transport.getAttribute('pwd');
-					}
-				})
+			var transports = $(jingle).find('>content>transport');
+			transports.each( (idx,transport) => {
+				if (ufrag == transport.getAttribute('ufrag')) {
+					pwd = transport.getAttribute('pwd');
+				}
 			});
 			
 			// convert candidate from webrtc to jingle 
@@ -94,11 +91,10 @@ var XMPPVideoRoom = (function() {
 		});	
 	}
 
-	XMPPVideoRoom.prototype.onCall = function(connection, iq, data) {
-		console.log("<=== webrtc answer sdp:" + data.sdp);		
-		
+	XMPPVideoRoom.prototype.onCall = function(connection, iq, data) {		
 		var jingle = iq.querySelector("jingle");
 		var sid = jingle.getAttribute("sid");
+		console.log("<=== webrtc answer sid:" + sid);		
 		
 		this.sessionList[sid].state = "UP";
 		var earlyCandidates = this.sessionList[sid].earlyCandidates;
@@ -151,73 +147,72 @@ var XMPPVideoRoom = (function() {
 		var sid = jingle.getAttribute("sid");
 		var action = jingle.getAttribute("action");
 		var id = iq.getAttribute("id");
+		const fromJid = iq.getAttribute('from');
+		var ack = $iq({ type: "result", to: fromJid, id })
 
 		var bind = this;
 
-		if (action === "session-initiate") {	
-			var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id })
-			connection.sendIQ(ack);		
-			
-			var sdp = new SDP('');
-			sdp.fromJingle($(jingle));
-			console.log("<=== xmpp offer sdp:" + sdp.raw);
-			
-			this.sessionList[sid] = { connection, state: "INIT", earlyCandidates:[] } ;
+		if (action === "session-initiate") 	{
+			connection.sendIQ(ack);	
 
-			var method = this.srvurl + "/api/call?peerid="+ sid +"&url="+encodeURIComponent(url)+"&options="+encodeURIComponent("rtptransport=tcp&timeout=60");
-			request("POST" , method, {body:JSON.stringify({type:"offer",sdp:sdp.raw})}).done( function (response) { 
-					if (response.statusCode === 200) {
-						bind.onCall(connection, iq, JSON.parse(response.body));
+			const resource = Strophe.getResourceFromJid(fromJid);
+			const isP2P = (resource !== 'focus');
+			console.log("<=== xmpp offer sid:" + sid + " resource:" + resource);
+
+			if (!isP2P) {
+				var sdp = new SDP('');
+				sdp.fromJingle($(jingle));
+				
+				this.sessionList[sid] = { connection, state: "INIT", earlyCandidates:[] } ;
+
+				var method = this.srvurl + "/api/call?peerid="+ sid +"&url="+encodeURIComponent(url)+"&options="+encodeURIComponent("rtptransport=tcp&timeout=60");
+				request("POST" , method, {body:JSON.stringify({type:"offer",sdp:sdp.raw})}).done( function (response) { 
+						if (response.statusCode === 200) {
+							bind.onCall(connection, iq, JSON.parse(response.body));
+						}
+						else {
+							bind.onError(response.statusCode);
+						}
 					}
-					else {
-						bind.onError(response.statusCode);
-					}
-				}
-			);
-			
+				);
+			}
+				
 		} else if (action === "transport-info") {
+			connection.sendIQ(ack);		
 
 			console.log("<=== xmpp candidate sid:" + sid);
 			
-			var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id })
-			connection.sendIQ(ack);		
-
-			var contents = $(jingle).find('>content');
-			contents.each( (contentIdx,content) => {
-				var transports = $(content).find('>transport');
-				transports.each( (idx,transport) => {
-					var ufrag = transport.getAttribute('ufrag');
-					var candidates = $(transport).find('>candidate');
-					candidates.each ( (idx,candidate) => {
-						var sdp = SDPUtil.candidateFromJingle(candidate);
-						sdp = sdp.replace("a=candidate","candidate");
-						sdp = sdp.replace("\r\n"," ufrag " + ufrag);
-						var candidate = { candidate:sdp, sdpMid:"", sdpMLineIndex:contentIdx }
-						console.log("===> webrtc candidate :" + JSON.stringify(candidate));
-			
-						if (this.sessionList[sid].state == "INIT") {
-							this.sessionList[sid].earlyCandidates.push(candidate);
-						} else {
-							var method = this.srvurl + "/api/addIceCandidate?peerid="+ sid;
-							request("POST" , method, { body: JSON.stringify(candidate) }).done( function (response) { 
-									if (response.statusCode === 200) {
-										console.log("method:"+method+ " answer:" +response.body);
-									}
-									else {
-										bind.onError(response.statusCode);
-									}
+			var transports = $(jingle).find('>content>transport');
+			transports.each( (idx,transport) => {
+				var ufrag = transport.getAttribute('ufrag');
+				var candidates = $(transport).find('>candidate');
+				candidates.each ( (idx,candidate) => {
+					var sdp = SDPUtil.candidateFromJingle(candidate);
+					sdp = sdp.replace("a=candidate","candidate");
+					sdp = sdp.replace("\r\n"," ufrag " + ufrag);
+					var candidate = { candidate:sdp, sdpMid:"", sdpMLineIndex:contentIdx }
+					console.log("===> webrtc candidate :" + JSON.stringify(candidate));
+		
+					if (this.sessionList[sid].state == "INIT") {
+						this.sessionList[sid].earlyCandidates.push(candidate);
+					} else {
+						var method = this.srvurl + "/api/addIceCandidate?peerid="+ sid;
+						request("POST" , method, { body: JSON.stringify(candidate) }).done( function (response) { 
+								if (response.statusCode === 200) {
+									console.log("method:"+method+ " answer:" +response.body);
 								}
-							);			
-						}							
-					});
+								else {
+									bind.onError(response.statusCode);
+								}
+							}
+						);			
+					}							
 				});
 			});
 	
 		} else if (action === "session-terminate") {			
-			console.log("<=== xmpp session-terminate sid:" + sid + " reason:" + jingle.querySelector("reason").textContent);
-
-			var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id })
 			connection.sendIQ(ack);		
+			console.log("<=== xmpp session-terminate sid:" + sid + " reason:" + jingle.querySelector("reason").textContent);
 
 			var method = this.srvurl + "/api/hangup?peerid="+ sid;
 			request("GET" , method).done( function (response) { 
@@ -230,18 +225,37 @@ var XMPPVideoRoom = (function() {
 				}
 			);
 		} else if (action === "source-add") {			
+			connection.sendIQ(ack);					
 			console.log("<=== xmpp source-add sid:" + sid);	
-			var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id })
-			connection.sendIQ(ack);					
 		} else if (action === "source-remove") {			
-			console.log("<=== xmpp source-remove sid:" + sid);	
-			var ack = $iq({ type: "result",  from: iq.getAttribute("to"), to: iq.getAttribute("from"), id })
 			connection.sendIQ(ack);					
+			console.log("<=== xmpp source-remove sid:" + sid);	
+		} else if (action === "session-info") {			
+			connection.sendIQ(ack);	
+			console.log("<=== xmpp session-info sid:" + sid);		
 		}
 					
 		return true;		
 	}
 	
+	XMPPVideoRoom.prototype.OnPresence = function(pres)
+	{
+		const from = pres.getAttribute('from');
+        const xElement = pres.getElementsByTagNameNS('http://jabber.org/protocol/muc#user', 'x')[0];
+		const mucUserItem = xElement && xElement.getElementsByTagName('item')[0];
+		if (mucUserItem) {
+			console.log ( "OnPresence jid:" + mucUserItem.getAttribute('jid') 
+						+ " role:" + mucUserItem.getAttribute('role')
+						+ " affiliation:" + mucUserItem.getAttribute('affiliation'));
+
+			const nickEl = pres.getElementsByTagName('nick')[0];
+			if (nickEl) {
+				console.log ( "OnPresence nick:" + nickEl.textContent); 
+			}							
+		}
+		return true;		
+	}
+
 	XMPPVideoRoom.prototype.onConnect = function(connection, roomid, name, status)
 	{		
 	    if (status === Strophe.Status.CONNECTING) {
@@ -256,10 +270,9 @@ var XMPPVideoRoom = (function() {
 			console.log('Strophe is connected.');
 			
 
-
 			var roomUrl = roomid + "@" + "conference." + this.xmppUrl;			
 			var extPresence = Strophe.xmlElement('nick', {xmlns:'http://jabber.org/protocol/nick'}, name);
-			connection.muc.join(roomUrl, name, null, null, null, null, null, extPresence);	
+			connection.muc.join(roomUrl, name, null, this.OnPresence.bind(this), null, null, null, extPresence);	
 			
 			connection.muc.queryOccupants(roomUrl, (answer) => {
 				var contents = $(answer).find('>query>item').toArray();
