@@ -22,10 +22,8 @@ var XMPPVideoRoom = (function() {
 	* @param {string} name - name in Video Room
 	*/
 	XMPPVideoRoom.prototype.join = function(roomid, url, name) {
-		var bind = this;
-
 		var connection = new Strophe.Connection("https://" + this.xmppUrl + "/http-bind");
-		connection.addHandler(function(iq) { return bind.OnJingle(connection, iq, url) }, 'urn:xmpp:jingle:1', 'iq', 'set', null, null);
+		connection.addHandler(this.OnJingle.bind(this, connection, url), 'urn:xmpp:jingle:1', 'iq', 'set', null, null);
 		connection.roomid = roomid;
 		connection.name = name;
 		this.emit(connection.roomid + '/' + connection.name, "joining");
@@ -47,7 +45,7 @@ var XMPPVideoRoom = (function() {
 			connection.disco.addFeature("urn:ietf:rfc:5888"); // a=group, e.g. bundle
 			
 		}
-		connection.connect(this.xmppUrl, null, function(status) { bind.onConnect(connection, roomid, name, status); });
+		connection.connect(this.xmppUrl, null, this.onConnect.bind(this, connection, roomid, name));
 	}
 
 	XMPPVideoRoom.prototype.onReceiveCandidate = function(connection, answer, candidateList) {
@@ -152,7 +150,7 @@ var XMPPVideoRoom = (function() {
 		console.log("############onError:" + error)
 	}
 		
-	XMPPVideoRoom.prototype.OnJingle = function(connection, iq, url) {
+	XMPPVideoRoom.prototype.OnJingle = function(connection, url, iq) {
 		console.log("OnJingle from:" + iq.getAttribute("from") + " to:" + iq.getAttribute("to") + " action:" +  iq.querySelector("jingle").getAttribute("action"));
 		var jingle = iq.querySelector("jingle");
 		var sid = jingle.getAttribute("sid");
@@ -260,9 +258,9 @@ var XMPPVideoRoom = (function() {
 		return true;		
 	}
 	
-	XMPPVideoRoom.prototype.OnPresence = function(pres)
+	XMPPVideoRoom.prototype.OnPresence = function(connection,pres)
 	{
-		const from = pres.getAttribute('from');
+		const resource = Strophe.getResourceFromJid(pres.getAttribute('from'));
         const xElement = pres.getElementsByTagNameNS('http://jabber.org/protocol/muc#user', 'x')[0];
 		const mucUserItem = xElement && xElement.getElementsByTagName('item')[0];
 		if (mucUserItem) {
@@ -274,6 +272,9 @@ var XMPPVideoRoom = (function() {
 			if (nickEl) {
 				console.log ( "OnPresence nick:" + nickEl.textContent); 
 			}							
+		}
+		if (resource === connection.name) {
+			console.log ( "OnPresence connected"); 
 		}
 		return true;		
 	}
@@ -294,7 +295,7 @@ var XMPPVideoRoom = (function() {
 
 			var roomUrl = roomid + "@" + "conference." + this.xmppUrl;			
 			var extPresence = Strophe.xmlElement('nick', {xmlns:'http://jabber.org/protocol/nick'}, name);
-			connection.muc.join(roomUrl, name, null, this.OnPresence.bind(this), null, null, null, extPresence);	
+			connection.muc.join(roomUrl, name, null, this.OnPresence.bind(this,connection), null, null, null, extPresence);	
 			
 			this.emit(connection.roomid + '/' + connection.name, "joined");
 		}
