@@ -74,12 +74,9 @@
 		onGetDeviceList( JSON.parse(response.body));
 	});
 		
-	var serverName = null;	
-	var roomName = null;
-	
 	function connect(webrtcStream) {	
-		serverName = document.querySelector('#xmppServer').value;
-		roomName = document.querySelector('#xmppRoom').value;
+		var serverName = document.querySelector('#xmppServer').value;
+		var roomName = document.querySelector('#xmppRoom').value;
 	
 		var xmpp = new XMPPVideoRoom(serverName, webrtcConfig.url);
 		xmpp.join(roomName, webrtcStream, webrtcStream);

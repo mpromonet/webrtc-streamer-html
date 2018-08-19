@@ -33,8 +33,6 @@ var XMPPVideoRoom = (function() {
 		// disco stuff
 		if (connection.disco) {
 			connection.disco.addIdentity('client', 'http://jitsi.org/jitsimeet');
-			connection.disco.addFeature(Strophe.NS.DISCO_INFO);
-			connection.disco.addFeature(Strophe.NS.CAPS);
 			connection.disco.addFeature("urn:xmpp:jingle:1");	
 			connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:1");	
 			connection.disco.addFeature("urn:xmpp:jingle:transports:ice-udp:1");	
@@ -151,12 +149,14 @@ var XMPPVideoRoom = (function() {
 	}
 		
 	XMPPVideoRoom.prototype.OnJingle = function(connection, url, iq) {
-		console.log("OnJingle from:" + iq.getAttribute("from") + " to:" + iq.getAttribute("to") + " action:" +  iq.querySelector("jingle").getAttribute("action"));
 		var jingle = iq.querySelector("jingle");
 		var sid = jingle.getAttribute("sid");
 		var action = jingle.getAttribute("action");
-		var id = iq.getAttribute("id");
 		const fromJid = iq.getAttribute('from');
+		const toJid = iq.getAttribute('to');
+		console.log("OnJingle from:" + fromJid + " to:" + toJid
+                                      + " sid:" + sid + " action:" + action);
+		var id = iq.getAttribute("id");
 		var ack = $iq({ type: "result", to: fromJid, id })
 
 		var bind = this;
@@ -166,7 +166,7 @@ var XMPPVideoRoom = (function() {
 
 			const resource = Strophe.getResourceFromJid(fromJid);
 			const isP2P = (resource !== 'focus');
-			console.log("<=== xmpp offer sid:" + sid + " resource:" + resource);
+			console.log("<=== xmpp offer sid:" + sid + " resource:" + resource + " initiator:" + jingle.getAttribute("initiator"));
 
 			if (!isP2P) {
 				this.emit(connection.roomid + '/' + connection.name, "publishing");
@@ -229,30 +229,7 @@ var XMPPVideoRoom = (function() {
 		} else if (action === "session-terminate") {			
 			connection.sendIQ(ack);		
 			console.log("<=== xmpp session-terminate sid:" + sid + " reason:" + jingle.querySelector("reason").textContent);
-			if (this.sessionList[sid]) {
-				var method = this.srvurl + "/api/hangup?peerid="+ sid;
-				request("GET" , method).done( function (response) { 
-						if (response.statusCode === 200) {
-							console.log("method:"+method+ " answer:" +response.body);
-						}
-						else {
-							bind.onError(response.statusCode);
-						}
-					}
-				);
-
-				delete this.sessionList[sid];
-			}
-
-		} else if (action === "source-add") {			
-			connection.sendIQ(ack);					
-			console.log("<=== xmpp source-add sid:" + sid);	
-		} else if (action === "source-remove") {			
-			connection.sendIQ(ack);					
-			console.log("<=== xmpp source-remove sid:" + sid);	
-		} else if (action === "session-info") {			
-			connection.sendIQ(ack);	
-			console.log("<=== xmpp session-info sid:" + sid);		
+			this.leaveSession(sid);
 		}
 					
 		return true;		
@@ -264,17 +241,23 @@ var XMPPVideoRoom = (function() {
         const xElement = pres.getElementsByTagNameNS('http://jabber.org/protocol/muc#user', 'x')[0];
 		const mucUserItem = xElement && xElement.getElementsByTagName('item')[0];
 		if (mucUserItem) {
-			console.log ( "OnPresence jid:" + mucUserItem.getAttribute('jid') 
+			var msg = " jid:" + mucUserItem.getAttribute('jid') 
 						+ " role:" + mucUserItem.getAttribute('role')
-						+ " affiliation:" + mucUserItem.getAttribute('affiliation'));
+						+ " affiliation:" + mucUserItem.getAttribute('affiliation');
+
+			const statusEl = pres.getElementsByTagName('status')[0];
+			if (statusEl) {
+				msg += " status:" + statusEl.getAttribute('code'); 
+			}
 
 			const nickEl = pres.getElementsByTagName('nick')[0];
 			if (nickEl) {
-				console.log ( "OnPresence nick:" + nickEl.textContent); 
-			}							
+				msg += "OnPresence nick:" + nickEl.textContent; 
+			}
+			console.log ( "OnPresence " + msg); 							
 		}
 		if (resource === connection.name) {
-			console.log ( "OnPresence connected"); 
+			console.log ( "OnPresence " + connection.name + " connected"); 
 		}
 		return true;		
 	}
@@ -301,8 +284,10 @@ var XMPPVideoRoom = (function() {
 		}
 	}
 		
-	XMPPVideoRoom.prototype.leave = function () {
-		Object.entries(this.sessionList).forEach( ([sid,session]) => {
+
+	XMPPVideoRoom.prototype.leaveSession = function (sid) {
+		var session = this.sessionList[sid];
+		if (session) {
 			this.emit(session.connection.roomid + '/' + session.connection.name, "leaving");
 
 			var roomUrl = session.connection.roomid + "@" + "conference." + this.xmppUrl;
@@ -329,6 +314,14 @@ var XMPPVideoRoom = (function() {
 			session.connection.flush();
 			session.connection.disconnect();	
 			this.emit(session.connection.roomid + '/' + session.connection.name, "leaved");
+
+			delete this.sessionList[sid];
+		}
+	}
+
+	XMPPVideoRoom.prototype.leave = function () {
+		Object.keys(this.sessionList).forEach( (sid) => {
+			this.leaveSession(sid);
 		});
 		this.sessionList = {};
 	}
