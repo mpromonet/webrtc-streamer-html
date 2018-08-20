@@ -3,7 +3,6 @@
 <script src="libs/strophe.min.js" ></script>
 <script src="libs/strophe.muc.min.js" ></script>
 <script src="libs/strophe.disco.min.js" ></script>
-<script src="libs/strophe.caps.min.js" ></script>
 <script src="libs/strophe.jingle.sdp.js"></script>
 <script src="libs/jquery-1.12.4.min.js"></script>
 <script src="libs/request.min.js"></script>
@@ -26,7 +25,7 @@
 	// ------------------------------------------
 	// XMPP connections
 	// ------------------------------------------	
-	var XMPPServerList = [];
+	var XMPPServerList = {};
 	
 	function getText(url) {
 		var text;
@@ -78,16 +77,21 @@
 		var serverName = document.querySelector('#xmppServer').value;
 		var roomName = document.querySelector('#xmppRoom').value;
 	
-		var xmpp = new XMPPVideoRoom(serverName, webrtcConfig.url);
+		if (!XMPPServerList[serverName]) {
+			XMPPServerList[serverName] = new XMPPVideoRoom(serverName, webrtcConfig.url);
+		}
+		var xmpp = XMPPServerList[serverName];
 		xmpp.join(roomName, webrtcStream, webrtcStream);
-		XMPPServerList.push(xmpp);
 	}
 	
 	function disconnect(webrtcStream) {
-		XMPPServerList.forEach( (xmpp) => {
-			xmpp.leave();
-		});
-		XMPPServerList.length = 0;
+		var serverName = document.querySelector('#xmppServer').value;
+		var roomName = document.querySelector('#xmppRoom').value;
+
+		var xmpp = XMPPServerList[serverName];
+		if (xmpp) {
+			xmpp.leave(roomName, webrtcStream);
+		}
 	}
 	
 	function openroom() {
@@ -97,7 +101,9 @@
 	}
 
 	window.onbeforeunload = function() { 
-		disconnect();
+		XMPPServerList.entries().forEach( ([serverName, xmpp]) => {
+			xmpp.leaveAll();
+		});
 	};		
 </script>
 </html>

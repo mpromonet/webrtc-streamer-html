@@ -319,11 +319,19 @@ var XMPPVideoRoom = (function() {
 		}
 	}
 
-	XMPPVideoRoom.prototype.leave = function () {
+	XMPPVideoRoom.prototype.leaveAll = function () {
 		Object.keys(this.sessionList).forEach( (sid) => {
 			this.leaveSession(sid);
 		});
 		this.sessionList = {};
+	}
+
+	XMPPVideoRoom.prototype.leave = function (roomId, username) {
+		Object.entries(this.sessionList).forEach( ([sid, session]) => {
+			if ( (session.connection.roomid === roomId) && (session.connection.name === username) ) {
+				this.leaveSession(sid);
+			}
+		});
 	}
 
 	return XMPPVideoRoom;
