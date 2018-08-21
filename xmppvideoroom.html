@@ -58,12 +58,10 @@
 			option.onclick = function () { 
 				if (this.className === "active") {
 					disconnect(this.url.video); 
-					var navElt = 	document.getElementById (this.id);
-					navElt.className = "";							
+					this.className = "";							
 				} else {
 					connect(this.url.video); 
-					var navElt = 	document.getElementById (this.id);
-					navElt.className = "active";							
+					this.className = "active";							
 				}
 			}
 			urllist.appendChild(option);

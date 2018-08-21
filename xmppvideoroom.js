@@ -9,7 +9,7 @@ var XMPPVideoRoom = (function() {
 	*/
 	var XMPPVideoRoom = function XMPPVideoRoom (xmppUrl, srvurl, bus) {	
 		this.xmppUrl     = xmppUrl;
-		this.srvurl      = srvurl || "https://"+window.location.hostname+":"+window.location.port;
+		this.srvurl      = srvurl || "//"+window.location.hostname+":"+window.location.port;
 		this.sessionList = {};
 		this.bus = bus;
 	};
@@ -171,7 +171,6 @@ var XMPPVideoRoom = (function() {
 			if (!isP2P) {
 				this.emit(connection.roomid + '/' + connection.name, "publishing");
 
-				console.log("<=== jingle:" + JSON.stringify(jingle.node));
 				var sdp = new SDP('');
 				sdp.fromJingle($(jingle));
 				
