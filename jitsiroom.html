@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
-<head lang="en">
+<head>
     <meta charset="UTF-8">
-    <title></title>
+    <title>Jitsi Room</title>
 	<link rel="stylesheet" type="text/css" href="styles.css">
     <script src="libs/jquery-1.12.4.min.js"></script>
     <script src="libs/lib-jitsi-meet.min.js"></script>
@@ -107,7 +107,7 @@
 			bosh: 'https://' + serverUrl + '/http-bind',
 		};
 
-		connection = new JitsiMeetJS.JitsiConnection(null, null, options);
+		var connection = new JitsiMeetJS.JitsiConnection(null, null, options);
 		connection.roomName = roomName;
 
 		connection.addEventListener(JitsiMeetJS.events.connection.CONNECTION_ESTABLISHED, onConnectionSuccess);
@@ -115,12 +115,14 @@
 		connection.addEventListener(JitsiMeetJS.events.connection.CONNECTION_DISCONNECTED, disconnect);
 
 		connection.connect();
+		
+		return connection;
 	}
 
 	function load() {
 		var serverName = document.querySelector('#xmppServer').value;
 		var roomName = document.querySelector('#xmppRoom').value;
-		join(serverName, roomName);
+		connection = join(serverName, roomName);
 	}
 
 	function unload() {
@@ -130,6 +132,7 @@
 				connection.room = null;
 			}
 			connection.disconnect();
+			connection = null;
 		}
 	}
 	
