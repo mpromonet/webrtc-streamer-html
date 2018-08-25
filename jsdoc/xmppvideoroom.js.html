@@ -1,4 +1,32 @@
-var XMPPVideoRoom = (function() {
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: xmppvideoroom.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: xmppvideoroom.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>//var XMPPVideoRoom = (function() {
 
 	
 	/** 
@@ -53,7 +81,7 @@ var XMPPVideoRoom = (function() {
 	*/
 	XMPPVideoRoom.prototype.leave = function (roomId, username) {
 		Object.entries(this.sessionList).forEach( ([sid, session]) => {
-			if ( (session.connection.roomid === roomId) && (session.connection.name === username) ) {
+			if ( (session.connection.roomid === roomId) &amp;&amp; (session.connection.name === username) ) {
 				this.leaveSession(sid);
 			}
 		});
@@ -81,11 +109,11 @@ var XMPPVideoRoom = (function() {
 
 		candidateList.forEach(function (candidate) {
 			var jsoncandidate = SDPUtil.parse_icecandidate(candidate.candidate);
-			console.log("<=== webrtc candidate:" +  JSON.stringify(jsoncandidate));
+			console.log("&lt;=== webrtc candidate:" +  JSON.stringify(jsoncandidate));
 			// get ufrag
 			var ufrag = "";
 			var elems = candidate.candidate.split(' ');
-			for (var i = 8; i < elems.length; i += 2) {
+			for (var i = 8; i &lt; elems.length; i += 2) {
 				switch (elems[i]) {
 					case 'ufrag':
 						ufrag = elems[i + 1];
@@ -130,7 +158,7 @@ var XMPPVideoRoom = (function() {
 	XMPPVideoRoom.prototype.onCall = function(connection, iq, data) {		
 		var jingle = iq.querySelector("jingle");
 		var sid = jingle.getAttribute("sid");
-		console.log("<=== webrtc answer sid:" + sid);		
+		console.log("&lt;=== webrtc answer sid:" + sid);		
 		
 		this.sessionList[sid].state = "UP";
 		var earlyCandidates = this.sessionList[sid].earlyCandidates;
@@ -198,7 +226,7 @@ var XMPPVideoRoom = (function() {
 
 			const resource = Strophe.getResourceFromJid(fromJid);
 			const isP2P = (resource !== 'focus');
-			console.log("<=== xmpp offer sid:" + sid + " resource:" + resource + " initiator:" + jingle.getAttribute("initiator"));
+			console.log("&lt;=== xmpp offer sid:" + sid + " resource:" + resource + " initiator:" + jingle.getAttribute("initiator"));
 
 			if (!isP2P) {
 				this.emit(connection.roomid + '/' + connection.name, "publishing");
@@ -208,7 +236,7 @@ var XMPPVideoRoom = (function() {
 				
 				this.sessionList[sid] = { connection, state: "INIT", earlyCandidates:[] } ;
 
-				var method = this.srvurl + "/api/call?peerid="+ sid +"&url="+encodeURIComponent(url)+"&options="+encodeURIComponent("rtptransport=tcp&timeout=60");
+				var method = this.srvurl + "/api/call?peerid="+ sid +"&amp;url="+encodeURIComponent(url)+"&amp;options="+encodeURIComponent("rtptransport=tcp&amp;timeout=60");
 				request("POST" , method, {body:JSON.stringify({type:"offer",sdp:sdp.raw})}).done( function (response) { 
 						if (response.statusCode === 200) {
 							bind.onCall(connection, iq, JSON.parse(response.body));
@@ -223,7 +251,7 @@ var XMPPVideoRoom = (function() {
 		} else if (action === "transport-info") {
 			connection.sendIQ(ack);		
 
-			console.log("<=== xmpp candidate sid:" + sid);
+			console.log("&lt;=== xmpp candidate sid:" + sid);
 			
 			if (this.sessionList[sid]) {
 				var contents = $(jingle).find('>content');
@@ -259,7 +287,7 @@ var XMPPVideoRoom = (function() {
 			}
 		} else if (action === "session-terminate") {			
 			connection.sendIQ(ack);		
-			console.log("<=== xmpp session-terminate sid:" + sid + " reason:" + jingle.querySelector("reason").textContent);
+			console.log("&lt;=== xmpp session-terminate sid:" + sid + " reason:" + jingle.querySelector("reason").textContent);
 			this.leaveSession(sid);
 		}
 					
@@ -273,7 +301,7 @@ var XMPPVideoRoom = (function() {
 	{
 		const resource = Strophe.getResourceFromJid(pres.getAttribute('from'));
         const xElement = pres.getElementsByTagNameNS('http://jabber.org/protocol/muc#user', 'x')[0];
-		const mucUserItem = xElement && xElement.getElementsByTagName('item')[0];
+		const mucUserItem = xElement &amp;&amp; xElement.getElementsByTagName('item')[0];
 		if (mucUserItem) {
 			var msg = " jid:" + mucUserItem.getAttribute('jid') 
 						+ " role:" + mucUserItem.getAttribute('role')
@@ -360,7 +388,30 @@ var XMPPVideoRoom = (function() {
 	}
 
 
-	return XMPPVideoRoom;
-})();
+//	return XMPPVideoRoom;
+//})();
 
-module.exports = XMPPVideoRoom;
+//module.exports = XMPPVideoRoom;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="JanusVideoRoom.html">JanusVideoRoom</a></li><li><a href="WebRtcStreamer.html">WebRtcStreamer</a></li><li><a href="XMPPVideoRoom.html">XMPPVideoRoom</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.3</a> on Sat Aug 25 2018 15:00:27 GMT+0200 (CEST)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
