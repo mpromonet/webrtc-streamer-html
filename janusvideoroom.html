@@ -3,6 +3,7 @@
 <script src="libs/request.min.js" ></script>
 <script src="libs/ag-grid.min.js"></script>
 <script src="libs/adapter.min.js"></script>
+<script src="libs/EventEmitter.min.js" ></script>
 <script src="janusvideoroom.json" ></script>
 <script src="janusvideoroom.js" ></script>
 <script src="webrtcstreamer.json" ></script>
@@ -29,6 +30,9 @@ footer {
 	document.querySelector('#janusUrl').value  = janusRoomConfig.url;
 	document.querySelector('#janusRoom').value = janusRoomConfig.roomId;
 
+	var bus = new EventEmitter();
+	bus.addListener('state', clientCallBack);	
+	
 	var janus;	
 	
 	// columns
@@ -74,8 +78,7 @@ footer {
 				params.api.refreshCells([params.node], ['roomid']);
 				
 				if (!janus) {
-					janus = new JanusVideoRoom(document.querySelector('#janusUrl').value, webrtcConfig.url);
-					janus.subscribeEvents(clientCallBack);
+					janus = new JanusVideoRoom(document.querySelector('#janusUrl').value, webrtcConfig.url, bus);
 				}
 				janus.join(parseInt(params.data.roomid), params.data.url, JSON.stringify(params.data.url));
 				
@@ -146,7 +149,7 @@ footer {
 		document.getElementById("footer").innerHTML = "<p><a href='https://github.com/mpromonet/webrtc-streamer'>WebRTC-Streamer</a>"
 							+ " " + version.split(" ")[0] + "</p>";
 	}
-		
+	
 	// load
 	window.onload         = function() { 
 		request( 'GET',  webrtcConfig.url + "/api/getMediaList" ).done(

@@ -9,6 +9,7 @@
 <script src="libs/EventEmitter.min.js" ></script>
 <script src="xmppvideoroom.js" ></script>
 <script src="xmppvideoroom.json" ></script>
+<script src="webrtcstreamer.json" ></script>
 </head>
 <body></body>
 <script>   
@@ -19,7 +20,7 @@
 	}
 	var bus = new EventEmitter();
 	bus.addListener('state', writeStatus);
-	var xmpp = new XMPPVideoRoom(xmppRoomConfig.url, null, bus);
+	var xmpp = new XMPPVideoRoom(xmppRoomConfig.url, webrtcConfig.url, bus);
 	xmpp.join(xmppRoomConfig.roomId, "rtsp://184.72.239.149/vod/mp4:BigBuckBunny_175k.mov","Bunny");
 	
 	window.onbeforeunload = function() { 
