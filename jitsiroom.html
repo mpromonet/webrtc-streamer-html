@@ -3,52 +3,138 @@
 <head lang="en">
     <meta charset="UTF-8">
     <title></title>
+	<link rel="stylesheet" type="text/css" href="styles.css">
     <script src="libs/jquery-1.12.4.min.js"></script>
     <script src="libs/lib-jitsi-meet.min.js"></script>
 	<script src="xmppvideoroom.json" ></script>
-    <script src="jitsiroom.js" ></script>
 </head>
 <body>
 	XMPP Url:<input id="xmppServer" type="text" size="50" /> 
-	Room id:<input id="xmppRoom" type="text" /><br/>
-    <a href="#" onclick="load()">Load</a>
-	<a href="#" onclick="unload()">Unload</a><br/>
-	<a href="#" onclick="kick()">kick</a><br/>
-	<div id="participants"></div>
+	Room id:<input id="xmppRoom" type="text" />
+	<a href="#" onclick="load()">Load</a>
+	<a href="#" onclick="unload()">Unload</a>
 </body>
 <script>
 	// set default value
 	document.querySelector('#xmppServer').value  = xmppRoomConfig.url;
 	document.querySelector('#xmppRoom').value = xmppRoomConfig.roomId;
 
+	let connection = null;
+	let remoteTracks = {};
+
+	function onRemoteAddTrack(track) {
+		console.log(`onRemoteAddTrack track ${track}`);
+		if (!track.isLocal()) {
+			const participant = track.getParticipantId();		
+			const idx = remoteTracks[participant].push(track);
+			const id = participant + track.getType() + idx;
+			if (track.getType() === 'video') {
+				$('body').append(`<video autoplay='1' id='${id}' title='${participant}' onclick='kick("${participant}")' />`);
+			} else {
+				$('body').append(`<audio autoplay='1' id='${id}' />`);
+			}
+			track.attach($(`#${id}`)[0]);
+		}
+	}
+
+	function onRemoteRemoveTrack(track) {
+		console.log(`onRemoteRemoveTrack track ${track}`);
+		if (!track.isLocal()) {
+			const participant = track.getParticipantId();
+			const tracks = remoteTracks[participant];
+			if (tracks) {
+				for (let i = 0; i < tracks.length; i++) {
+					const idx = i+1;
+					const id = participant + track.getType() + idx;
+					tracks[i].detach($(`#${id}`));
+					$(`#${id}`).remove();
+					tracks[i].dispose();
+				}
+			}
+		}
+	}
+
+	function onUserLeft(id) {
+		console.log('user left id:' + id);
+		delete remoteTracks[id];
+	}
+
+	function onUserJoined(id) {
+		console.log('user joined id:' + id);
+		remoteTracks[id] = [];
+		remoteTracks[id].length = 0;	
+	}
+
+	function onConnectionSuccess() {
+		connection.room = connection.initJitsiConference(connection.roomName, {});
+		
+		connection.room.on(JitsiMeetJS.events.conference.USER_JOINED, onUserJoined);
+		connection.room.on(JitsiMeetJS.events.conference.USER_LEFT, onUserLeft);
+		
+		connection.room.on(JitsiMeetJS.events.conference.TRACK_ADDED, onRemoteAddTrack);
+		connection.room.on(JitsiMeetJS.events.conference.TRACK_REMOVED, onRemoteRemoveTrack);
+
+		connection.room.join();
+	}
+
+	function onConnectionFailed() {
+		console.error('Connection Failed!');
+	}
+
+	function disconnect() {
+		console.log('disconnect!');
+		connection.removeEventListener(JitsiMeetJS.events.connection.CONNECTION_ESTABLISHED, onConnectionSuccess);
+		connection.removeEventListener(JitsiMeetJS.events.connection.CONNECTION_FAILED, onConnectionFailed);
+		connection.removeEventListener(JitsiMeetJS.events.connection.CONNECTION_DISCONNECTED, disconnect);
+	}
+
+	function kick(paticipant) {
+		if (connection && connection.room) {
+			console.log("kick:" + paticipant)
+			connection.room.kickParticipant(paticipant);
+		}    
+	}
+
+	function join(serverUrl, roomName) {
+		JitsiMeetJS.setLogLevel(JitsiMeetJS.logLevels.ERROR);
+		JitsiMeetJS.init({});
+
+		const options = {
+			hosts: {
+				domain: serverUrl,
+				muc: 'conference.' + serverUrl 
+			},
+			bosh: 'https://' + serverUrl + '/http-bind',
+		};
+
+		connection = new JitsiMeetJS.JitsiConnection(null, null, options);
+		connection.roomName = roomName;
+
+		connection.addEventListener(JitsiMeetJS.events.connection.CONNECTION_ESTABLISHED, onConnectionSuccess);
+		connection.addEventListener(JitsiMeetJS.events.connection.CONNECTION_FAILED, onConnectionFailed);
+		connection.addEventListener(JitsiMeetJS.events.connection.CONNECTION_DISCONNECTED, disconnect);
+
+		connection.connect();
+	}
+
 	function load() {
 		var serverName = document.querySelector('#xmppServer').value;
 		var roomName = document.querySelector('#xmppRoom').value;
 		join(serverName, roomName);
 	}
+
 	function unload() {
-		leave();
+		if (connection) {
+			if (connection.room) {
+				connection.room.leave();
+				connection.room = null;
+			}
+			connection.disconnect();
+		}
 	}
-	function kick() {
-		kickParticipants();
-	}	
-	function write(text) {
-		var textNode = document.createTextNode(text);
-		document.querySelector('#participants').appendChild(textNode);		
-		var textNode = document.createElement("br");		
-		document.querySelector('#participants').appendChild(textNode);		
-	}
-	function list() {
-		document.querySelector('#participants').innerHTML = "";
 	
-		var participants = getParticipants() || [];
-		participants.forEach( (item) => {
-			write(item._id);
-		});
-	}		
-	setInterval(() => list(),1000);
+	$(window).bind('load', load);
 	$(window).bind('beforeunload', unload);
-	$(window).bind('unload', unload);
 
 </script>
 </html>
