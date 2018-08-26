@@ -58,10 +58,8 @@
 			option.onclick = function () { 
 				if (this.className === "active") {
 					disconnect(this.url.video); 
-					this.className = "";							
 				} else {
 					connect(this.url, this.url.video); 
-//					this.className = "active";							
 				}
 			}
 			urllist.appendChild(option);
@@ -120,7 +118,7 @@
 	
 	var roomName = document.querySelector('#xmppRoom').value;	
 	var xmpp = getXMPPServer();
-	var monitor = xmpp.query(roomName);		
+	xmpp.query(roomName);		
 	
 	window.onbeforeunload = function() { 
 		XMPPServerList.entries().forEach( ([serverName, xmpp]) => {
