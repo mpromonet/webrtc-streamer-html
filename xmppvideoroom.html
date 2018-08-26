@@ -118,9 +118,9 @@
 		window.open( location.protocol + "//" + serverName + "/" + roomName);
 	}
 	
-//	var roomName = document.querySelector('#xmppRoom').value;	
-//	var xmpp = getXMPPServer();
-//	xmpp.query(roomName);		
+	var roomName = document.querySelector('#xmppRoom').value;	
+	var xmpp = getXMPPServer();
+	var monitor = xmpp.query(roomName);		
 	
 	window.onbeforeunload = function() { 
 		XMPPServerList.entries().forEach( ([serverName, xmpp]) => {

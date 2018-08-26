@@ -81,22 +81,26 @@ var XMPPVideoRoom = (function() {
 	XMPPVideoRoom.prototype.query = function(roomid) {		
 		var connection = new Strophe.Connection("https://" + this.xmppUrl + "/http-bind");
 		connection.roomid = roomid;
-		var xmpp = this;
+
+		var xmpp = this;		
 		connection.connect(this.xmppUrl, null, (status) => {
 			if (status === Strophe.Status.CONNECTED) {
-				var roomUrl = roomid + "@" + "conference." + this.xmppUrl;		
-				
+				var roomUrl = roomid + "@" + "conference." + this.xmppUrl;						
+
 				var password = null;
-				connection.muc.join(roomUrl, null, null, xmpp.OnPresence.bind(xmpp,connection), null, password, null, null);
-				
+				var name = "monitor" + Math.floor(Math.random()*1000000).toString();
+				connection.muc.join(roomUrl, name, null, xmpp.OnPresence.bind(xmpp,connection), null, password, null, null);					
+
 				connection.muc.queryOccupants(roomUrl, (query) => {
 					var occupants = $(query).find(">query>item");
 					occupants.toArray().forEach( (item) => {
 						xmpp.emitPresence(connection.roomid + '/'  + item.getAttribute("name"), "in");
 					});
+
 				});
 			}			
 		});
+		return connection;
 	}
 	
 	
@@ -167,6 +171,7 @@ var XMPPVideoRoom = (function() {
 		if (earlyCandidates) {
 			while (earlyCandidates.length) {
 					var candidate = earlyCandidates.shift();
+					console.log("===> webrtc candidate :" + JSON.stringify(candidate));
 					var method = this.srvurl + "/api/addIceCandidate?peerid="+ sid;
 					request("POST" , method, { body: JSON.stringify(candidate) }).done( function (response) { 
 							if (response.statusCode === 200) {
@@ -276,11 +281,12 @@ var XMPPVideoRoom = (function() {
 							sdp = sdp.replace("a=candidate","candidate");
 							sdp = sdp.replace("\r\n"," ufrag " + ufrag);
 							var candidate = { candidate:sdp, sdpMid:"", sdpMLineIndex:contentIdx }
-							console.log("===> webrtc candidate :" + JSON.stringify(candidate));
 				
 							if (this.sessionList[sid].earlyCandidates) {
+								console.log("queue candidate waiting for call answer");
 								this.sessionList[sid].earlyCandidates.push(candidate);
 							} else {
+								console.log("===> webrtc candidate :" + JSON.stringify(candidate));
 								var method = this.srvurl + "/api/addIceCandidate?peerid="+ sid;
 								request("POST" , method, { body: JSON.stringify(candidate) }).done( function (response) { 
 										if (response.statusCode === 200) {
@@ -311,31 +317,36 @@ var XMPPVideoRoom = (function() {
 	XMPPVideoRoom.prototype.OnPresence = function(connection,pres)
 	{
 		const resource = Strophe.getResourceFromJid(pres.getAttribute('from'));
+		var msg = "resource:" + resource;
+		const type = pres.getAttribute('type');
+		if (type) {
+			msg += " type:" + type;
+		}
+
         const xElement = pres.getElementsByTagNameNS('http://jabber.org/protocol/muc#user', 'x')[0];
 		const mucUserItem = xElement && xElement.getElementsByTagName('item')[0];
 		if (mucUserItem) {
-			var msg = " jid:" + mucUserItem.getAttribute('jid') 
+			msg += " jid:" + mucUserItem.getAttribute('jid') 
 						+ " role:" + mucUserItem.getAttribute('role')
 						+ " affiliation:" + mucUserItem.getAttribute('affiliation');
-
-			const statusEl = pres.getElementsByTagName('status')[0];
-			if (statusEl) {
-				var code = statusEl.getAttribute('code');
-				msg += " status:" + code; 
-				if (code === "100" || code === "201" || code === "210") {
-						this.emitPresence(connection.roomid + '/'  + resource, "in");
-				}
-				else if (code === "301" || code === "307") {
-						this.emitPresence(connection.roomid + '/' + resource, "out");
-				}
-			}
-
-			const nickEl = pres.getElementsByTagName('nick')[0];
-			if (nickEl) {
-				msg += " nick:" + nickEl.textContent; 
-			}
-			console.log ( "OnPresence " + msg); 							
 		}
+		const statusEl = pres.getElementsByTagName('status')[0];
+		if (statusEl) {
+			var code = statusEl.getAttribute('code');
+			msg += " status:" + code; 
+			if (code === "100" || code === "201" || code === "210") {
+					this.emitPresence(connection.roomid + '/'  + resource, "in");
+			}
+			else if (code === "301" || code === "307") {
+					this.emitPresence(connection.roomid + '/' + resource, "out");
+			}
+		}
+
+		const nickEl = pres.getElementsByTagName('nick')[0];
+		if (nickEl) {
+			msg += " nick:" + nickEl.textContent; 
+		}
+		console.log ( "OnPresence " + msg); 							
 
 		return true;		
 	}
