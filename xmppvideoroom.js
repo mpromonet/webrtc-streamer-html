@@ -366,6 +366,8 @@ var XMPPVideoRoom = (function() {
 			}
 		} else if (type == "unavailable") {
 			this.emitPresence(roomid + '/' + resource, "out");
+		} else {
+			this.emitPresence(roomid + '/' + resource, "in");
 		}
 
 		const nickEl = pres.getElementsByTagName('nick')[0];
