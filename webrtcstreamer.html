@@ -23,8 +23,7 @@
 			document.getElementById("title").innerHTML=url.video; 
 			webRtcServer.connect(url.video,url.audio,options);
 			request("GET" , webrtcConfig.url + "/api/version").done( function (response) { 
-				document.getElementById("footer").innerHTML = "<p><a href='https://github.com/mpromonet/webrtc-streamer'>WebRTC-Streamer</a>"
-									+ JSON.parse(response.body).split(" ")[0] + "</p>";			
+				document.getElementById("footer").innerHTML = "<p><a href='https://github.com/mpromonet/webrtc-streamer'>WebRTC-Streamer</a> " + JSON.parse(response.body).split(" ")[0] + "</p>";			
 			});			
 		}
 		window.onbeforeunload = function() { webRtcServer.disconnect() }
@@ -38,9 +37,9 @@
 </script>
 </head>
 <body>
-   <h2 id="title"></h2>
-    <video id="video"></video>
-	<footer id="footer"></footer>
+  <h2 id="title"></h2>
+  <video id="video"></video>
+  <footer id="footer"></footer>
 </body>
 </html>
 
