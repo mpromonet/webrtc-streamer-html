@@ -156,7 +156,7 @@
 				var videoelt = document.createElement("video");
 				videoelt.id = videoTag;
 				videoelt.title = getText(url);
-				videoelt.onclick = function() { window.open(webrtcConfig.url + "/webrtcstreamer.html?video=" + url.video + "&audio=" + url.audio); }
+				videoelt.onclick = function() { window.open(webrtcConfig.url + "/webrtcstreamer.html?video=" + encodeURIComponent(url.video) + "&audio=" + encodeURIComponent(url.audio) + "&options=" + encodeURIComponent(argoptions)); }
 				divelt.appendChild(videoelt);
 				contentDiv.appendChild(divelt);
 			}			
@@ -166,7 +166,13 @@
 		if (videoelt) {		
 			// connect video element to webrtc stream
 			var webRtcServer = new WebRtcStreamer(videoTag, webrtcConfig.url);
-			webRtcServer.connect(url.video, url.audio, argoptions);
+
+			var options = argoptions;
+			if (layout) {
+				options += "&width=320&height=240";
+			}
+
+			webRtcServer.connect(url.video, url.audio, options);
 				
 			// highlight the navigation 
 			var navElt = 	document.getElementById ("nav_" + videoTag);

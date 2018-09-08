@@ -15,7 +15,9 @@
 			if (params.has("video") || params.has("audio")) {
 				url = { video:params.get("video"), audio:params.get("audio") };
 			}
-			options = params.get("options");
+			if (params.has("options")) {
+				options = params.get("options");
+			}
 		} 	    
 		window.onload         = function() {  
 			document.getElementById("title").innerHTML=url.video; 
