@@ -23,10 +23,8 @@ footer {
 	// columns
 	var columnDefs = [
 	    { headerName: "Peerid" , field: "peerid",  cellClass: "cell" },
-	    { headerName: "Stream", field: "stream",  cellClass: "cell" },
+	    { headerName: "Stream", field: "streamid",  cellClass: "cell" },
 	    { headerName: "Size", field: "size",  cellClass: "cell" },
-	    { headerName: "Sent", field: "sent",  cellClass: "cell" },
-	    { headerName: "Received", field: "received",  cellClass: "cell" },
 	    { headerName: "Action" , cellClass: "cell", 
 	      field: "action", 
 	      cellRenderer: function(params) { 
@@ -63,27 +61,25 @@ footer {
 		var rowData = [];
 		peerConnectionList.forEach(function(item) {
 			var peerConnection = Object.values(item)[0];
-			var stats = peerConnection.stats;
-			var frameHeight = "0";
-			var frameWidth = "0";
-			var framesSent = "";
-			var framesReceived = "";
-			Object.entries(stats).forEach( ([key, value]) => {
-					if (value.hasOwnProperty("trackIdentifier")) {
-						frameHeight = value.frameHeight;
-						frameWidth = value.frameWidth;
-						framesSent = value.framesSent;
-						framesReceived = value.framesReceived;
-					}
-				}
-			)
 			
-			var stream = "";
+			var streamid = "";
+			var frameHeight = 0;
+			var frameWidth = 0;
 			if (peerConnection.hasOwnProperty("streams")){
-				stream = Object.keys(peerConnection.streams[0])[0];
+				streamid = Object.keys(peerConnection.streams)[0];
+
+				var stream = Object.values(peerConnection.streams)[0];
+				Object.entries(stream).forEach( ([key, value]) => {
+					if (value.hasOwnProperty("width")) {
+						frameHeight = value.width;
+					}
+					if (value.hasOwnProperty("height")) {
+						frameWidth = value.height;
+					}
+				});
 			}
 			
-			rowData.push({peerid: Object.keys(item)[0] , stream, size:frameHeight+"x"+frameWidth, sent:framesSent, received:framesReceived , action:"hangup" })
+			rowData.push({peerid: Object.keys(item)[0] , streamid, size:frameHeight+"x"+frameWidth, action:"hangup" })
 		});
 		gridOptions.api.setRowData(rowData);		
 	}
