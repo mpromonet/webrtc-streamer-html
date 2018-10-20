@@ -112,7 +112,9 @@ WebRtcStreamer.prototype.onReceiveGetIceServers = function(iceServers, videourl,
 								bind.onError(response.statusCode);
 							}
 						}
-					);					
+					).error( function(err) { 
+						console.log(err) 
+					} );					
 				}
 				, function() {} );
 			
@@ -230,7 +232,7 @@ WebRtcStreamer.prototype.onReceiveCall = function(dataJson) {
                         while (bind.earlyCandidates.length) {
 				var candidate = bind.earlyCandidates.shift();
 				
-				request("POST" , bind.srvurl + "/api/addIceCandidate?peerid=" + bind.pc.peerid, { body: JSON.stringify(candidate) })
+/*				request("POST" , bind.srvurl + "/api/addIceCandidate?peerid=" + bind.pc.peerid, { body: JSON.stringify(candidate) })
 					.done( function (response) { 
 						if (response.statusCode === 200) {
 							console.log("addIceCandidate ok:" + response.body);
@@ -239,9 +241,9 @@ WebRtcStreamer.prototype.onReceiveCall = function(dataJson) {
 							bind.onError(response.statusCode);
 						}
 					}
-				);
+				);*/
 			}
-			
+			/*
 			request("GET" , bind.srvurl + "/api/getIceCandidate?peerid=" + bind.pc.peerid)
 				.done( function (response) { 
 					if (response.statusCode === 200) {
@@ -252,7 +254,7 @@ WebRtcStreamer.prototype.onReceiveCall = function(dataJson) {
 					}
 				}
 			);
-				
+			*/	
 		}
 		, function(error) { console.log ("setRemoteDescription error:" + JSON.stringify(error)); });
 }	
