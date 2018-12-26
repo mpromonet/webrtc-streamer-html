@@ -281,7 +281,7 @@ var XMPPVideoRoom = (function() {
 				if (url.audio) {
 					method += "&audio="+encodeURIComponent(url.audio);
 				}
-				method += "&options="+encodeURIComponent("rtptransport=tcp&timeout=60");				
+				method += "&options="+encodeURIComponent("rtptransport=tcp")+"&"+encodeURIComponent("timeout=60");
 				request("POST" , method, {body:JSON.stringify({type:"offer",sdp:sdp.raw})}).done( function (response) { 
 						if (response.statusCode === 200) {
 							bind.onCall(connection, roomid, name, iq, JSON.parse(response.body));
