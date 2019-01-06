@@ -276,7 +276,12 @@ var XMPPVideoRoom = (function() {
 				
 				this.sessionList[sid] = { roomid, name, earlyCandidates:[] } ;
 
-				var method = this.srvurl + "/api/call?peerid="+ sid +"&url="+encodeURIComponent(url.video)+"&audio="+encodeURIComponent(url.audio)+"&options="+encodeURIComponent("rtptransport=tcp&timeout=60");
+				var videourl = url.video || url;
+				var method = this.srvurl + "/api/call?peerid="+ sid +"&url="+encodeURIComponent(videourl);
+				if (url.audio) {
+					method += "&audio="+encodeURIComponent(url.audio);
+				}
+				method += "&options="+encodeURIComponent("rtptransport=tcp&timeout=60");				
 				request("POST" , method, {body:JSON.stringify({type:"offer",sdp:sdp.raw})}).done( function (response) { 
 						if (response.statusCode === 200) {
 							bind.onCall(connection, roomid, name, iq, JSON.parse(response.body));

@@ -138,7 +138,7 @@ footer {
 		gridOptions.api.forEachNode( function(node) {
 			var data = node.data;
 			node.webrtc = new WebRtcStreamer(JSON.stringify(data.url), webrtcConfig.url)
-			node.webrtc.connect(data.url.video, data.url.audio, webrtcConfig.options);
+			node.webrtc.connect(data.url.video, data.url.audio, janusRoomConfig.options);
 		});
 	}
 	

@@ -114,7 +114,9 @@ WebRtcStreamer.prototype.onReceiveGetIceServers = function(iceServers, videourl,
 						}
 					);					
 				}
-				, function() {} );
+				, function(error) {
+					console.log ("setLocalDescription error:" + JSON.stringify(error)); 
+				} );
 			
 		}, function(error) { 
 			alert("Create offer error:" + JSON.stringify(error));
@@ -241,7 +243,7 @@ WebRtcStreamer.prototype.onReceiveCall = function(dataJson) {
 					}
 				);
 			}
-			
+		
 			request("GET" , bind.srvurl + "/api/getIceCandidate?peerid=" + bind.pc.peerid)
 				.done( function (response) { 
 					if (response.statusCode === 200) {
@@ -252,9 +254,10 @@ WebRtcStreamer.prototype.onReceiveCall = function(dataJson) {
 					}
 				}
 			);
-				
 		}
-		, function(error) { console.log ("setRemoteDescription error:" + JSON.stringify(error)); });
+		, function(error) { 
+			console.log ("setRemoteDescription error:" + JSON.stringify(error)); 
+		});
 }	
 
 /*
