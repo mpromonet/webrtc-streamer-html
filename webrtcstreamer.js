@@ -216,8 +216,13 @@ WebRtcStreamer.prototype.onAddStream = function(event) {
 	
 	var videoElement = document.getElementById(this.videoElement);
 	videoElement.srcObject = event.stream;
-	videoElement.setAttribute("playsinline", true);
-	videoElement.play();
+	var promise = videoElement.play();
+	if (promise !== undefined) {
+	  promise.catch(error => {
+		console.warn("error:"+error);
+		videoElement.setAttribute("controls", true);
+	  });
+	}
 }
 		
 /*
