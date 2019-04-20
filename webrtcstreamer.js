@@ -39,7 +39,7 @@ WebRtcStreamer.prototype.connect = function(videourl, audiourl, options, localst
 					bind.onReceiveGetIceServers.call(bind,JSON.parse(response.body), videourl, audiourl, options, localstream);
 				}
 				else {
-					bind.onError(response.statusCode);
+					bind.onError("getIceServers "+response.statusCode);
 				}
 			}
 		);		
@@ -78,10 +78,7 @@ WebRtcStreamer.prototype.onReceiveGetIceServers = function(iceServers, videourl,
 	try {            
 		this.pc = this.createPeerConnection();
 
-		var peerid = Math.random();			
-		this.pc.peerid = peerid;
-		
-		var callurl = this.srvurl + "/api/call?peerid="+ peerid+"&url="+encodeURIComponent(videourl);
+		var callurl = this.srvurl + "/api/call?peerid="+ this.pc.peerid+"&url="+encodeURIComponent(videourl);
 		if (audiourl) {
 			callurl += "&audiourl="+encodeURIComponent(audiourl);
 		}
@@ -109,7 +106,7 @@ WebRtcStreamer.prototype.onReceiveGetIceServers = function(iceServers, videourl,
 								bind.onReceiveCall.call(bind,JSON.parse(response.body));
 							}
 							else {
-								bind.onError(response.statusCode);
+								bind.onError("call " + response.statusCode);
 							}
 						}
 					);					
@@ -128,18 +125,35 @@ WebRtcStreamer.prototype.onReceiveGetIceServers = function(iceServers, videourl,
 	}	    
 }
 
+
+WebRtcStreamer.prototype.getIceCandidate = function() {
+	var bind = this;
+	request("GET" , this.srvurl + "/api/getIceCandidate?peerid=" + this.pc.peerid)
+		.done( function (response) { 
+			if (response.statusCode === 200) {
+				bind.onReceiveCandidate.call(bind,JSON.parse(response.body));
+			}
+			else {
+				bind.onError("getIceCandidate" + response.statusCode);
+			}
+		}
+	);
+}
+					
 /*
 * create RTCPeerConnection 
 */
 WebRtcStreamer.prototype.createPeerConnection = function() {
 	console.log("createPeerConnection  config: " + JSON.stringify(this.pcConfig) + " option:"+  JSON.stringify(this.pcOptions));
 	var pc = new RTCPeerConnection(this.pcConfig, this.pcOptions);
-	var streamer = this;
-	pc.onicecandidate = function(evt) { streamer.onIceCandidate.call(streamer, evt); };
-	pc.onaddstream    = function(evt) { streamer.onAddStream.call(streamer,evt); };
+	pc.peerid = Math.random();		
+	
+	var bind = this;
+	pc.onicecandidate = function(evt) { bind.onIceCandidate.call(bind, evt); };
+	pc.onaddstream    = function(evt) { bind.onAddStream.call(bind,evt); };
 	pc.oniceconnectionstatechange = function(evt) {  
 		console.log("oniceconnectionstatechange  state: " + pc.iceConnectionState);
-		var videoElement = document.getElementById(streamer.videoElement);
+		var videoElement = document.getElementById(bind.videoElement);
 		if (videoElement) {
 			if (pc.iceConnectionState === "connected") {
 				videoElement.style.opacity = "1.0";
@@ -149,7 +163,9 @@ WebRtcStreamer.prototype.createPeerConnection = function() {
 			}			
 			else if ( (pc.iceConnectionState === "failed") || (pc.iceConnectionState === "closed") )  {
 				videoElement.style.opacity = "0.5";
-			}			
+			} else if (pc.iceConnectionState === "new") {
+				bind.getIceCandidate.call(bind,pc.peerid)
+			}
 		}
 	}
 	pc.ondatachannel = function(evt) {  
@@ -195,7 +211,7 @@ WebRtcStreamer.prototype.onIceCandidate = function (event) {
 						console.log("addIceCandidate ok:" + response.body);
 					}
 					else {
-						bind.onError(response.statusCode);
+						bind.onError("addIceCandidate " +response.statusCode);
 					}
 				}
 			);					
@@ -244,22 +260,13 @@ WebRtcStreamer.prototype.onReceiveCall = function(dataJson) {
 							console.log("addIceCandidate ok:" + response.body);
 						}
 						else {
-							bind.onError(response.statusCode);
+							bind.onError("addIceCandidate " + response.statusCode);
 						}
 					}
 				);
 			}
 		
-			request("GET" , bind.srvurl + "/api/getIceCandidate?peerid=" + bind.pc.peerid)
-				.done( function (response) { 
-					if (response.statusCode === 200) {
-						bind.onReceiveCandidate.call(bind,JSON.parse(response.body));
-					}
-					else {
-						bind.onError(response.statusCode);
-					}
-				}
-			);
+			bind.getIceCandidate.call(bind,bind.pc.peerid)
 		}
 		, function(error) { 
 			console.log ("setRemoteDescription error:" + JSON.stringify(error)); 
