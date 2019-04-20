@@ -12,7 +12,7 @@ function WebRtcStreamer (videoElement, srvurl) {
 
 	this.pcOptions        = { "optional": [{"DtlsSrtpKeyAgreement": true} ] };
 
-	this.mediaConstraints = { offerToReceiveAudio: true, offerToReceiveVideo: true };
+	this.mediaConstraints = { offerToReceiveAudio: false, offerToReceiveVideo: true };
 
 	this.iceServers = null;
 	this.earlyCandidates = [];
@@ -231,7 +231,8 @@ WebRtcStreamer.prototype.onAddStream = function(event) {
 WebRtcStreamer.prototype.onReceiveCall = function(dataJson) {
 	var bind = this;
 	console.log("offer: " + JSON.stringify(dataJson));
-	this.pc.setRemoteDescription(new RTCSessionDescription(dataJson)
+	var descr = new RTCSessionDescription(dataJson);
+	this.pc.setRemoteDescription(descr
 		, function()      { 
                         console.log ("setRemoteDescription ok");
                         while (bind.earlyCandidates.length) {
