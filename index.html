@@ -39,7 +39,7 @@
 		if (url.video) {
 			text = url.video + " ";
 		}
-		if (url.audio) {
+		if (url.audio && (url.audio != url.video)) {
 			text += url.audio + " ";
 		}
 		return text;
@@ -169,7 +169,7 @@
 
 			var options = argoptions;
 			if (layout) {
-				options += "&width=320&height=240";
+				options += webrtcConfig.layoutextraoptions;
 			}
 
 			webRtcServer.connect(url.video, url.audio, options);

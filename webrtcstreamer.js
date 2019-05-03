@@ -12,7 +12,7 @@ function WebRtcStreamer (videoElement, srvurl) {
 
 	this.pcOptions        = { "optional": [{"DtlsSrtpKeyAgreement": true} ] };
 
-	this.mediaConstraints = { offerToReceiveAudio: false, offerToReceiveVideo: true };
+	this.mediaConstraints = { offerToReceiveAudio: true, offerToReceiveVideo: true };
 
 	this.iceServers = null;
 	this.earlyCandidates = [];
@@ -204,17 +204,7 @@ WebRtcStreamer.prototype.createPeerConnection = function() {
 WebRtcStreamer.prototype.onIceCandidate = function (event) {
 	if (event.candidate) {
                 if (this.pc.currentRemoteDescription)  {
-			var bind = this;
-			request("POST" , this.srvurl + "/api/addIceCandidate?peerid="+this.pc.peerid, { body: JSON.stringify(event.candidate) })
-				.done( function (response) { 
-					if (response.statusCode === 200) {
-						console.log("addIceCandidate ok:" + response.body);
-					}
-					else {
-						bind.onError("addIceCandidate " +response.statusCode);
-					}
-				}
-			);					
+			this.addIceCandidate(this.pc.peerid, event.candidate);					
 		} else {
 			this.earlyCandidates.push(event.candidate);
 		}
@@ -224,6 +214,21 @@ WebRtcStreamer.prototype.onIceCandidate = function (event) {
 	}
 }
 
+
+WebRtcStreamer.prototype.addIceCandidate = function(peerid, candidate) {
+	var bind = this;
+	request("POST" , this.srvurl + "/api/addIceCandidate?peerid="+peerid, { body: JSON.stringify(candidate) })
+		.done( function (response) { 
+			if (response.statusCode === 200) {
+				console.log("addIceCandidate ok:" + response.body);
+			}
+			else {
+				bind.onError("addIceCandidate " +response.statusCode);
+			}
+		}
+	);
+}
+				
 /*
 * RTCPeerConnection AddTrack callback
 */
@@ -253,17 +258,7 @@ WebRtcStreamer.prototype.onReceiveCall = function(dataJson) {
                         console.log ("setRemoteDescription ok");
                         while (bind.earlyCandidates.length) {
 				var candidate = bind.earlyCandidates.shift();
-				
-				request("POST" , bind.srvurl + "/api/addIceCandidate?peerid=" + bind.pc.peerid, { body: JSON.stringify(candidate) })
-					.done( function (response) { 
-						if (response.statusCode === 200) {
-							console.log("addIceCandidate ok:" + response.body);
-						}
-						else {
-							bind.onError("addIceCandidate " + response.statusCode);
-						}
-					}
-				);
+				bind.addIceCandidate.call(bind, bind.pc.peerid, candidate);				
 			}
 		
 			bind.getIceCandidate.call(bind,bind.pc.peerid)
