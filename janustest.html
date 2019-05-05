@@ -15,8 +15,7 @@
 	var bus = new EventEmitter();
 	bus.addListener('state', writeStatus);	
 	var janus = new JanusVideoRoom(janusRoomConfig.url, webrtcConfig.url, bus);
-	janus.join(janusRoomConfig.roomId, "rtsp://pi2.local:8554/unicast","pi2");
-	janus.join(janusRoomConfig.roomId, "rtsp://217.17.220.110/axis-media/media.amp","media");
+	janus.join(janusRoomConfig.roomId, "rtsp://184.72.239.149/vod/mp4:BigBuckBunny_175k.mov","Bunny");
     
 </script>
 </head>
