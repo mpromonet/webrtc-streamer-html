@@ -13,7 +13,7 @@
 
   customElements.define('webrtc-streamer', class extends HTMLElement {
 	static get observedAttributes() {
-		return ['videostream','audiostream'];
+		return ['videostream','audiostream','options', 'webrtcurl'];
 	}  
 	
 	constructor() {
@@ -41,14 +41,16 @@
 	connectStream() {
 		this.disconnectStream();
 		
-		let videostream = this.getAttribute("videostream");
-		let audiostream = this.getAttribute("audiostream");
+		let webrtcurl = this.getAttribute("webrtcurl") || webrtcConfig.url;
+		let videostream = this.getAttribute("videostream") || webrtcConfig.defaultvideostream;
+		let audiostream = this.getAttribute("audiostream") || webrtcConfig.defaultaudiostream;
+		let options = this.getAttribute("options") || webrtcConfig.options;
 		
 		this.shadowDOM.getElementById("title").innerHTML = videostream; 
 		
 		let videoElement = this.shadowDOM.getElementById("video");
-		this.webRtcServer = new WebRtcStreamer(videoElement, webrtcConfig.url);
-		this.webRtcServer.connect(videostream, audiostream, webrtcConfig.options);
+		this.webRtcServer = new WebRtcStreamer(videoElement, webrtcurl);
+		this.webRtcServer.connect(videostream, audiostream, options);
 	}
 	
 	
