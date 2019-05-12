@@ -1,0 +1,26 @@
+<html>
+<head>
+<link rel="import" href="webrtc-streamer-element.html">
+</head>
+<body>
+<webrtc-streamer id="stream"></webrtc-streamer>
+<script>
+customElements.whenDefined('webrtc-streamer').then(() => {
+	var url = {video: webrtcConfig.defaultvideostream};  
+	var options = webrtcConfig.options;
+	if (typeof URLSearchParams != 'undefined') {
+		var params = new URLSearchParams(location.search);
+		if (params.has("video") || params.has("audio")) {
+			url = { video:params.get("video"), audio:params.get("audio") };
+		}
+		if (params.has("options")) {
+			options = params.get("options");
+		}
+	} 
+	
+	document.getElementById("stream").setAttribute('videostream', url.video);
+});
+</script>
+</body>
+</html>
+

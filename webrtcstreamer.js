@@ -6,7 +6,11 @@
  * @param {string} srvurl -  url of webrtc-streamer (default is current location)
 */
 function WebRtcStreamer (videoElement, srvurl) {
-	this.videoElement     = videoElement;	
+	if (typeof videoElement === "string") {
+		this.videoElement = document.getElementById(videoElement);
+	} else {
+		this.videoElement = videoElement;
+	}
 	this.srvurl           = srvurl || location.protocol+"//"+window.location.hostname+":"+window.location.port;
 	this.pc               = null;    
 
@@ -52,9 +56,8 @@ WebRtcStreamer.prototype.connect = function(videourl, audiourl, options, localst
  * Disconnect a WebRTC Stream and clear videoElement source
 */
 WebRtcStreamer.prototype.disconnect = function() {		
-	var videoElement = document.getElementById(this.videoElement);
-	if (videoElement) {
-		videoElement.src = "";
+	if (this.videoElement) {
+		this.videoElement.src = "";
 	}
 	if (this.pc) {
 		request("GET" , this.srvurl + "/api/hangup?peerid="+this.pc.peerid);
@@ -153,16 +156,15 @@ WebRtcStreamer.prototype.createPeerConnection = function() {
 	pc.onaddstream    = function(evt) { bind.onAddStream.call(bind,evt); };
 	pc.oniceconnectionstatechange = function(evt) {  
 		console.log("oniceconnectionstatechange  state: " + pc.iceConnectionState);
-		var videoElement = document.getElementById(bind.videoElement);
-		if (videoElement) {
+		if (this.videoElement) {
 			if (pc.iceConnectionState === "connected") {
-				videoElement.style.opacity = "1.0";
+				this.videoElement.style.opacity = "1.0";
 			}			
 			else if (pc.iceConnectionState === "disconnected") {
-				videoElement.style.opacity = "0.25";
+				this.videoElement.style.opacity = "0.25";
 			}			
 			else if ( (pc.iceConnectionState === "failed") || (pc.iceConnectionState === "closed") )  {
-				videoElement.style.opacity = "0.5";
+				this.videoElement.style.opacity = "0.5";
 			} else if (pc.iceConnectionState === "new") {
 				bind.getIceCandidate.call(bind,pc.peerid)
 			}
@@ -235,13 +237,12 @@ WebRtcStreamer.prototype.addIceCandidate = function(peerid, candidate) {
 WebRtcStreamer.prototype.onAddStream = function(event) {
 	console.log("Remote track added:" +  JSON.stringify(event));
 	
-	var videoElement = document.getElementById(this.videoElement);
-	videoElement.srcObject = event.stream;
-	var promise = videoElement.play();
+	this.videoElement.srcObject = event.stream;
+	var promise = this.videoElement.play();
 	if (promise !== undefined) {
 	  promise.catch(error => {
 		console.warn("error:"+error);
-		videoElement.setAttribute("controls", true);
+		this.videoElement.setAttribute("controls", true);
 	  });
 	}
 }

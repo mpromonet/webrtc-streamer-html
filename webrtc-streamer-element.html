@@ -1,0 +1,56 @@
+<script src="libs/request.min.js" ></script>
+<script src="webrtcstreamer.json" ></script>
+<script src="webrtcstreamer.js" ></script>
+
+<template id="webrtc-streamer">
+	<style>@import "styles.css"</style>
+	<h2 id="title"></h2>
+	<video id="video"></video>
+</template>
+
+<script>
+  let tmpl = document.currentScript.ownerDocument.querySelector('#webrtc-streamer');
+
+  customElements.define('webrtc-streamer', class extends HTMLElement {
+	static get observedAttributes() {
+		return ['videostream','audiostream'];
+	}  
+	
+	constructor() {
+		super(); 
+		let shadowRoot = this.attachShadow({mode: 'open'});
+		shadowRoot.appendChild(tmpl.content.cloneNode(true));
+		this.shadowDOM = shadowRoot;	
+	}
+	connectedCallback() {
+		this.connectStream();
+	}
+	disconnectedCallback() {
+		this.disconnectStream();
+	}
+	attributeChangedCallback(attrName, oldVal, newVal) {
+		this.connectStream();
+	}
+	
+	disconnectStream() {
+		if (this.webRtcServer) {
+			this.webRtcServer.disconnect();
+			this.webRtcServer = null;
+		}
+	}
+	connectStream() {
+		this.disconnectStream();
+		
+		let videostream = this.getAttribute("videostream");
+		let audiostream = this.getAttribute("audiostream");
+		
+		this.shadowDOM.getElementById("title").innerHTML = videostream; 
+		
+		let videoElement = this.shadowDOM.getElementById("video");
+		this.webRtcServer = new WebRtcStreamer(videoElement, webrtcConfig.url);
+		this.webRtcServer.connect(videostream, audiostream, webrtcConfig.options);
+	}
+	
+	
+  });
+</script>
