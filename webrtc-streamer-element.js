@@ -11,7 +11,7 @@ class WebRTCStreamerElement extends HTMLElement {
 		this.shadowDOM.innerHTML = `
 					<style>@import "styles.css"</style>
 					<h2 id="title"></h2>
-					<video id="video"></video>
+					<video id="video" muted></video>
 					`;
 	}
 	connectedCallback() {

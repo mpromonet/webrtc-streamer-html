@@ -156,6 +156,7 @@
 				var videoelt = document.createElement("video");
 				videoelt.id = videoTag;
 				videoelt.title = getText(url);
+				videoelt.muted = true;
 				videoelt.onclick = function() { window.open(webrtcConfig.url + "/webrtcstreamer.html?video=" + encodeURIComponent(url.video) + "&audio=" + encodeURIComponent(url.audio) + "&options=" + encodeURIComponent(argoptions)); }
 				divelt.appendChild(videoelt);
 				contentDiv.appendChild(divelt);
