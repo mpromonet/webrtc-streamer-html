@@ -1,58 +1,33 @@
-<script src="libs/request.min.js" ></script>
-<script src="webrtcstreamer.json" ></script>
-<script src="webrtcstreamer.js" ></script>
-
-<template id="webrtc-streamer">
-	<style>@import "styles.css"</style>
-	<h2 id="title"></h2>
-	<video id="video"></video>
-</template>
-
-<script>
-  let tmpl = document.currentScript.ownerDocument.querySelector('#webrtc-streamer');
-
-  customElements.define('webrtc-streamer', class extends HTMLElement {
-	static get observedAttributes() {
-		return ['videostream','audiostream','options', 'webrtcurl'];
-	}  
-	
-	constructor() {
-		super(); 
-		let shadowRoot = this.attachShadow({mode: 'open'});
-		shadowRoot.appendChild(tmpl.content.cloneNode(true));
-		this.shadowDOM = shadowRoot;	
-	}
-	connectedCallback() {
-		this.connectStream();
-	}
-	disconnectedCallback() {
-		this.disconnectStream();
-	}
-	attributeChangedCallback(attrName, oldVal, newVal) {
-		this.connectStream();
-	}
-	
-	disconnectStream() {
-		if (this.webRtcServer) {
-			this.webRtcServer.disconnect();
-			this.webRtcServer = null;
-		}
-	}
-	connectStream() {
-		this.disconnectStream();
-		
-		let webrtcurl = this.getAttribute("webrtcurl") || webrtcConfig.url;
-		let videostream = this.getAttribute("videostream") || webrtcConfig.defaultvideostream;
-		let audiostream = this.getAttribute("audiostream") || webrtcConfig.defaultaudiostream;
-		let options = this.getAttribute("options") || webrtcConfig.options;
-		
-		this.shadowDOM.getElementById("title").innerHTML = videostream; 
-		
-		let videoElement = this.shadowDOM.getElementById("video");
-		this.webRtcServer = new WebRtcStreamer(videoElement, webrtcurl);
-		this.webRtcServer.connect(videostream, audiostream, options);
-	}
-	
-	
+<html>
+<head>  
+    <style>@import "styles.css"</style>
+    <script src="webrtcstreamer.js"></script>
+    <script src="webrtcstreamer.json"></script>
+    <script type="module" src="webrtc-streamer-element.js"></script>
+</head>
+<body>
+  <webrtc-streamer id="stream"></webrtc-streamer>
+  <footer id="footer"></footer>
+  <script>
+  customElements.whenDefined('webrtc-streamer').then(() => {
+    var url = {video: webrtcConfig.defaultvideostream};  
+    var options = webrtcConfig.options;
+    if (typeof URLSearchParams != 'undefined') {
+        var params = new URLSearchParams(location.search);
+        if (params.has("video") || params.has("audio")) {
+            url = { video:params.get("video"), audio:params.get("audio") };
+        }
+        if (params.has("options")) {
+            options = params.get("options");
+        }
+    } 
+    
+    document.getElementById("stream").setAttribute('videostream', url.video);
+    request("GET" , webrtcConfig.url + "/api/version").done( function (response) { 
+        document.getElementById("footer").innerHTML = "<p><a href='https://github.com/mpromonet/webrtc-streamer'>WebRTC-Streamer</a> " + JSON.parse(response.body).split(" ")[0] + "</p>";			
+    });	
   });
-</script>
+  </script>
+</body>
+</html>
+

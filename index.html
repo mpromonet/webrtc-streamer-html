@@ -20,7 +20,7 @@
 	var argoptions = null;
 	var layout = null;
 	if (typeof URLSearchParams != 'undefined') {
-		var params = new URLSearchParams(location.search.slice(1));
+		var params = new URLSearchParams(location.search);
 		argurl = { video:params.get("video"), audio:params.get("audio") };
 		argoptions = params.get("options");
 		if (!argoptions) {
