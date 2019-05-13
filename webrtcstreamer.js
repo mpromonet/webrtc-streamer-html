@@ -1,4 +1,3 @@
-
 /** 
  * Interface with WebRTC-streamer API
  * @constructor
