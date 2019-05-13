@@ -240,7 +240,7 @@ WebRtcStreamer.prototype.onAddStream = function(event) {
 	this.videoElement.srcObject = event.stream;
 	var promise = this.videoElement.play();
 	if (promise !== undefined) {
-	  promise.catch(error => {
+	  promise.catch(function(error) {
 		console.warn("error:"+error);
 		this.videoElement.setAttribute("controls", true);
 	  });
