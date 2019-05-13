@@ -44,6 +44,7 @@ footer {
 		    videoElement.className = "cell";
 		    videoElement.width = 128;
 		    videoElement.height = 96;
+		    videoElement.muted = true;
 		    videoElement.addEventListener('click', function() {
 		         window.open(webrtcConfig.url + "/webrtcstreamer.html?video=" + encodeURIComponent(params.data.url.video) + "&audio=" + encodeURIComponent(params.data.url.audio));
                     });
