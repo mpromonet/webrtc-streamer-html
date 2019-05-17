@@ -7,7 +7,7 @@
 <script src="webrtcstreamer.js" ></script>
 <script>        
 	if (location.search.slice(1)) {
-		var url = { video:location.search };  
+		var url = { video:location.search.slice(1) };  
 		var options = webrtcConfig.options;
 		if (typeof URLSearchParams != 'undefined') {
 			var params = new URLSearchParams(location.search);

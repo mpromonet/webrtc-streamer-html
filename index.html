@@ -102,9 +102,10 @@
 			var nbcol = parseInt(splitLayout[1]);
 			nbVideos = nbrow*nbcol;
 		}
-		for (var i=0; i<deviceList.length && i<nbVideos ; i++) {			
-			add(deviceList[i]);
-		}		
+		var random = deviceList.sort(() => .5 - Math.random()).slice(0,nbVideos);
+		random.forEach((stream) => {
+			add(stream);
+		});
 	}
 	
 	// ------------------------------------------
