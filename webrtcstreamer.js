@@ -78,7 +78,7 @@ WebRtcStreamer.prototype.onReceiveGetIceServers = function(iceServers, videourl,
 	this.iceServers       = iceServers;
 	this.pcConfig         = iceServers || {"iceServers": [] };
 	try {            
-		this.pc = this.createPeerConnection();
+		this.createPeerConnection();
 
 		var callurl = this.srvurl + "/api/call?peerid="+ this.pc.peerid+"&url="+encodeURIComponent(videourl);
 		if (audiourl) {
@@ -147,7 +147,8 @@ WebRtcStreamer.prototype.getIceCandidate = function() {
 */
 WebRtcStreamer.prototype.createPeerConnection = function() {
 	console.log("createPeerConnection  config: " + JSON.stringify(this.pcConfig) + " option:"+  JSON.stringify(this.pcOptions));
-	var pc = new RTCPeerConnection(this.pcConfig, this.pcOptions);
+	this.pc = new RTCPeerConnection(this.pcConfig, this.pcOptions);
+	var pc = this.pc;
 	pc.peerid = Math.random();		
 	
 	var bind = this;
@@ -165,7 +166,7 @@ WebRtcStreamer.prototype.createPeerConnection = function() {
 			else if ( (pc.iceConnectionState === "failed") || (pc.iceConnectionState === "closed") )  {
 				this.videoElement.style.opacity = "0.5";
 			} else if (pc.iceConnectionState === "new") {
-				bind.getIceCandidate.call(bind,pc.peerid)
+				bind.getIceCandidate.call(bind)
 			}
 		}
 	}
@@ -255,13 +256,13 @@ WebRtcStreamer.prototype.onReceiveCall = function(dataJson) {
 	var descr = new RTCSessionDescription(dataJson);
 	this.pc.setRemoteDescription(descr
 		, function()      { 
-                        console.log ("setRemoteDescription ok");
-                        while (bind.earlyCandidates.length) {
+			console.log ("setRemoteDescription ok");
+			while (bind.earlyCandidates.length) {
 				var candidate = bind.earlyCandidates.shift();
 				bind.addIceCandidate.call(bind, bind.pc.peerid, candidate);				
 			}
 		
-			bind.getIceCandidate.call(bind,bind.pc.peerid)
+			bind.getIceCandidate.call(bind)
 		}
 		, function(error) { 
 			console.log ("setRemoteDescription error:" + JSON.stringify(error)); 
