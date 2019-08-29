@@ -1,30 +1,24 @@
 <html>
-<head>  
-    <style>@import "styles.css"</style>
+<head>
     <script src="webrtcstreamer.json"></script>
     <script type="module" src="webrtc-streamer-element.js"></script>
     <script type="module" src="webrtc-streamer-footer-element.js"></script>
+    <script type="module" src="webrtc-streamer-selector-element.js"></script>
 </head>
 <body>
-  <webrtc-streamer id="stream"></webrtc-streamer>
-  <webrtc-streamer-footer></webrtc-streamer-footer>
-  <script>
-  customElements.whenDefined('webrtc-streamer').then(() => {
-    var url = {video: webrtcConfig.defaultvideostream};  
-    var options = webrtcConfig.options;
-    if (typeof URLSearchParams != 'undefined') {
-        var params = new URLSearchParams(location.search);
-        if (params.has("video") || params.has("audio")) {
-            url = { video:params.get("video"), audio:params.get("audio") };
-        }
-        if (params.has("options")) {
-            options = params.get("options");
-        }
-    } 
-    
-    document.getElementById("stream").setAttribute('videostream', url.video);
-  });
-  </script>
+    <webrtc-streamer-selector id="selector" selected="Chamrousse"></webrtc-streamer-selector>
+    <webrtc-streamer id="stream"></webrtc-streamer>
+    <webrtc-streamer-footer></webrtc-streamer-footer>
+
+    <script>
+        customElements.whenDefined('webrtc-streamer').then(() => {
+            document.getElementById("selector").addEventListener('change', (event) => {
+                let streamElement = document.getElementById("stream");
+                streamElement.setAttribute('videostream', event.detail.url.video);
+                streamElement.setAttribute('audiostream', event.detail.url.audio);
+            });
+        });        
+        </script>
 </body>
 </html>
 
