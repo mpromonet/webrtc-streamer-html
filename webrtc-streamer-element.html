@@ -1,13 +1,13 @@
 <html>
 <head>  
     <style>@import "styles.css"</style>
-    <script src="webrtcstreamer.js"></script>
     <script src="webrtcstreamer.json"></script>
     <script type="module" src="webrtc-streamer-element.js"></script>
+    <script type="module" src="webrtc-streamer-footer-element.js"></script>
 </head>
 <body>
   <webrtc-streamer id="stream"></webrtc-streamer>
-  <footer id="footer"></footer>
+  <webrtc-streamer-footer></webrtc-streamer-footer>
   <script>
   customElements.whenDefined('webrtc-streamer').then(() => {
     var url = {video: webrtcConfig.defaultvideostream};  
@@ -23,9 +23,6 @@
     } 
     
     document.getElementById("stream").setAttribute('videostream', url.video);
-    request("GET" , webrtcConfig.url + "/api/version").done( function (response) { 
-        document.getElementById("footer").innerHTML = "<p><a href='https://github.com/mpromonet/webrtc-streamer'>WebRTC-Streamer</a> " + JSON.parse(response.body).split(" ")[0] + "</p>";			
-    });	
   });
   </script>
 </body>

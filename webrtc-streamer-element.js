@@ -1,4 +1,6 @@
 import "./libs/request.min.js";
+import "./libs/adapter.min.js";
+import "./webrtcstreamer.js";
 
 class WebRTCStreamerElement extends HTMLElement {
 	static get observedAttributes() {

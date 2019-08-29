@@ -1,10 +1,12 @@
+var WebRtcStreamer = (function() {
+
 /** 
  * Interface with WebRTC-streamer API
  * @constructor
  * @param {string} videoElement - id of the video element tag
  * @param {string} srvurl -  url of webrtc-streamer (default is current location)
 */
-function WebRtcStreamer (videoElement, srvurl) {
+var WebRtcStreamer = function WebRtcStreamer (videoElement, srvurl) {
 	if (typeof videoElement === "string") {
 		this.videoElement = document.getElementById(videoElement);
 	} else {
@@ -240,9 +242,10 @@ WebRtcStreamer.prototype.onAddStream = function(event) {
 	this.videoElement.srcObject = event.stream;
 	var promise = this.videoElement.play();
 	if (promise !== undefined) {
+	  var bind = this;
 	  promise.catch(function(error) {
 		console.warn("error:"+error);
-		this.videoElement.setAttribute("controls", true);
+		bind.videoElement.setAttribute("controls", true);
 	  });
 	}
 }
@@ -294,3 +297,11 @@ WebRtcStreamer.prototype.onReceiveCandidate = function(dataJson) {
 WebRtcStreamer.prototype.onError = function(status) {
 	console.log("onError:" + status);
 }
+
+return WebRtcStreamer;
+})();
+
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined')
+	module.exports = WebRtcStreamer;
+else
+	window.WebRtcStreamer = WebRtcStreamer;
