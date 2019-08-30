@@ -4,7 +4,7 @@ import "./webrtcstreamer.js";
 
 class WebRTCStreamerElement extends HTMLElement {
 	static get observedAttributes() {
-		return ['url', 'options', 'webrtcurl'];
+		return ['url', 'options', 'webrtcurl', 'notitle'];
 	}  
 	
 	constructor() {
@@ -16,6 +16,8 @@ class WebRTCStreamerElement extends HTMLElement {
 					<video id="video" muted></video>
 					`;
 		this.initialized = false;
+		this.titleElement = this.shadowDOM.getElementById("title");
+		this.videoElement = this.shadowDOM.getElementById("video");
 	}
 	connectedCallback() {
 		this.connectStream();
@@ -28,6 +30,9 @@ class WebRTCStreamerElement extends HTMLElement {
 	attributeChangedCallback(attrName, oldVal, newVal) {
 		if (this.initialized) {
 			this.connectStream();
+		}
+		if (attrName === "notitle") {
+			this.titleElement.style.visibility = "hidden";
 		}
 	}
 	
@@ -55,10 +60,9 @@ class WebRTCStreamerElement extends HTMLElement {
 		}
 		let options = this.getAttribute("options") || webrtcConfig.options;
 		
-		this.shadowDOM.getElementById("title").innerHTML = videostream; 
+		this.titleElement.innerHTML = videostream; 
 		
-		let videoElement = this.shadowDOM.getElementById("video");
-		this.webRtcServer = new WebRtcStreamer(videoElement, webrtcurl);
+		this.webRtcServer = new WebRtcStreamer(this.videoElement, webrtcurl);
 		this.webRtcServer.connect(videostream, audiostream, options);
 	}
 	

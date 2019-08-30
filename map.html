@@ -1,5 +1,6 @@
 <html>
 	<head>
+            <meta charset="UTF-8">
             <style>
             #map {
                 height: 100%;
@@ -20,31 +21,53 @@
            center: new google.maps.LatLng(0,0)
          };
          const map = new google.maps.Map(document.getElementById("map"), mapOptions);
-   
-         new HTMLMapMarker({
-           latlng: new google.maps.LatLng(12.2376122,-69.1801954),
-           map: map,
-           html: `<webrtc-streamer url='{"video":"Curacao"}' options='width=64&height=48'></webrtc-streamer>`
-         });
-   
-         new HTMLMapMarker({
-           latlng: new google.maps.LatLng(52.1042263,4.2494571),
-           map: map,
-           html: `<webrtc-streamer url='{"video":"Scheveningen-1"}' options='width=64&height=48'></webrtc-streamer>`
-         });
 
-         new HTMLMapMarker({
-           latlng: new google.maps.LatLng(45.1176666,5.8604224),
-           map: map,
-           html: `<webrtc-streamer url='{"video":"Chamrousse"}' options='width=64&height=48'></webrtc-streamer>`
-         });
-
-         new HTMLMapMarker({
-           latlng: new google.maps.LatLng(49.0758931,19.7501234),
-           map: map,
-           html: `<webrtc-streamer url='{"video":"Vavrisovo"}' options='width=64&height=48'></webrtc-streamer>`
-         });
+         let mediaList = {
+           "Curacao" : new google.maps.LatLng(12.2376122,-69.1801954),
+           "Scheveningen-1" : new google.maps.LatLng(52.1042263,4.2494571),
+           "Vavrisovo": new google.maps.LatLng(49.0758931,19.7501234),
+           "VirginiaTech": new google.maps.LatLng(37.223357,-80.417004),
+           "PaçoDeArcos": new google.maps.LatLng(38.701468,-9.3101928)
+         }
          
+         let markerList = [];
+         for (let [key, latlng] of Object.entries(mediaList))  {
+              let marker = new HTMLMapMarker({
+                latlng,
+                map,
+                html: `<webrtc-streamer id="${key}" url='{"video":"${key}"}' options='width=64&height=48&rtptransport=tcp&timeout=60' notitle></webrtc-streamer>`
+              });      
+              google.maps.event.addListener(marker, 'click', function() {
+                map.setCenter(marker.getPosition());
+                const webrtc = document.getElementById(key);
+                webrtc.setAttribute("options","width=640&height=480&rtptransport=tcp&timeout=60")
+              });
+              markerList.push(marker);     
+         }
+         
+        map.addListener('zoom_changed', function() {
+          let zoom = map.getZoom();
+            for (let [key, latlng] of Object.entries(mediaList)) {
+              const webrtc = document.getElementById(key);
+              if ( (zoom >= 4) && (webrtc.getAttribute("options") != "width=320&height=240&rtptransport=tcp&timeout=60") )  {
+                webrtc.setAttribute("options","width=320&height=240&rtptransport=tcp&timeout=60")
+              } else if ( (zoom < 4) && (webrtc.getAttribute("options") != "width=64&height=48&rtptransport=tcp&timeout=60") )  {
+                webrtc.setAttribute("options","width=64&height=48&rtptransport=tcp&timeout=60")
+              }
+            }
+        });
+
+        map.addListener('idle', function() {
+            var bounds = map.getBounds();
+            let count = 0;
+            markerList.forEach( (marker) => {
+              if(bounds.contains(marker.getPosition())===true) {
+                count++;
+              }
+            })
+            console.log("count:"+count)
+        });
+
          
        </script>       
 	</body>

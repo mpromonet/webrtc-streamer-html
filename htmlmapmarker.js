@@ -11,23 +11,33 @@ class HTMLMapMarker extends google.maps.OverlayView {
       this.div.style.position = 'absolute';
       if (this.html) {
         this.div.innerHTML = this.html;
+
+        google.maps.event.addDomListener(this.div, 'click', (event) => {
+          event.stopPropagation();
+
+          google.maps.event.trigger(this, 'click', event);
+        });        
       }
     }
   
     positionDiv() {
       const point = this.getProjection().fromLatLngToDivPixel(this.latlng);
       if (point) {
-        this.div.style.left = `${point.x}px`;
-        this.div.style.top = `${point.y}px`;
+        const left = point.x - this.div.clientWidth/2;
+        this.div.style.left = `${left}px`;
+        const top = point.y - this.div.clientHeight/2;
+        this.div.style.top = `${top}px`;
       }
-    }
-  
-    draw() {
+    } 
+    onAdd() {
       if (!this.div) {
         this.createDiv();
-        const panes = this.getPanes();
-        panes.overlayLayer.appendChild(this.div);
+        this.getPanes().overlayMouseTarget.appendChild(this.div);
       }
+      this.positionDiv();
+    }
+
+    draw() {
       this.positionDiv();
     }
   
@@ -42,9 +52,6 @@ class HTMLMapMarker extends google.maps.OverlayView {
       return this.latlng;
     }
   
-    getDraggable() {
-      return false;
-    }
   }
   
   
