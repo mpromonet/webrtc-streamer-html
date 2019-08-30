@@ -1,0 +1,51 @@
+<html>
+	<head>
+            <style>
+            #map {
+                height: 100%;
+            }
+            </style>
+            <script src="./webrtcstreamer.json"></script>
+            <script type="module" src="./webrtc-streamer-element.js"></script>
+            <script src="https://maps.googleapis.com/maps/api/js?v=3"></script>
+            <script src="./htmlmapmarker.js"></script>
+    </head>
+	<body>
+       
+       <div id="map"></div>
+
+       <script>
+         const mapOptions = {
+           zoom: 2,
+           center: new google.maps.LatLng(0,0)
+         };
+         const map = new google.maps.Map(document.getElementById("map"), mapOptions);
+   
+         new HTMLMapMarker({
+           latlng: new google.maps.LatLng(12.2376122,-69.1801954),
+           map: map,
+           html: `<webrtc-streamer url='{"video":"Curacao"}' options='width=64&height=48'></webrtc-streamer>`
+         });
+   
+         new HTMLMapMarker({
+           latlng: new google.maps.LatLng(52.1042263,4.2494571),
+           map: map,
+           html: `<webrtc-streamer url='{"video":"Scheveningen-1"}' options='width=64&height=48'></webrtc-streamer>`
+         });
+
+         new HTMLMapMarker({
+           latlng: new google.maps.LatLng(45.1176666,5.8604224),
+           map: map,
+           html: `<webrtc-streamer url='{"video":"Chamrousse"}' options='width=64&height=48'></webrtc-streamer>`
+         });
+
+         new HTMLMapMarker({
+           latlng: new google.maps.LatLng(49.0758931,19.7501234),
+           map: map,
+           html: `<webrtc-streamer url='{"video":"Vavrisovo"}' options='width=64&height=48'></webrtc-streamer>`
+         });
+         
+         
+       </script>       
+	</body>
+</html>

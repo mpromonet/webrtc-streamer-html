@@ -14,8 +14,7 @@
         customElements.whenDefined('webrtc-streamer').then(() => {
             document.getElementById("selector").addEventListener('change', (event) => {
                 let streamElement = document.getElementById("stream");
-                streamElement.setAttribute('videostream', event.detail.url.video);
-                streamElement.setAttribute('audiostream', event.detail.url.audio);
+                streamElement.setAttribute('url', event.detail.url);
             });
         });        
         </script>

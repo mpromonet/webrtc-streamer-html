@@ -28,7 +28,7 @@ class WebRTCStreamerSelectorElement extends HTMLElement {
 			if (mediaList.selectedOptions.length > 0) {
 				this.dispatchEvent(new CustomEvent('change', {
 					detail: {
-					  url: JSON.parse(mediaList.selectedOptions[0].value),
+					  url: mediaList.selectedOptions[0].value,
 					}
 				  }));				
 			}	
@@ -37,12 +37,12 @@ class WebRTCStreamerSelectorElement extends HTMLElement {
 		mediaList.onchange = (event) => {
 				this.dispatchEvent(new CustomEvent('change', {
 					detail: {
-					  url: JSON.parse(mediaList.selectedOptions[0].value),
+					  url: mediaList.selectedOptions[0].value,
 					}
 				  }));		
 			}
-
 	}
+	
 	attributeChangedCallback(attrName, oldVal, newVal) {
 		if (attrName === "selected") {
 			this.selected = newVal;

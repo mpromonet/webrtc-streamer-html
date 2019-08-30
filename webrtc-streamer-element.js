@@ -4,7 +4,7 @@ import "./webrtcstreamer.js";
 
 class WebRTCStreamerElement extends HTMLElement {
 	static get observedAttributes() {
-		return ['videostream','audiostream','options', 'webrtcurl'];
+		return ['url', 'options', 'webrtcurl'];
 	}  
 	
 	constructor() {
@@ -15,15 +15,20 @@ class WebRTCStreamerElement extends HTMLElement {
 					<h2 id="title"></h2>
 					<video id="video" muted></video>
 					`;
+		this.initialized = false;
 	}
 	connectedCallback() {
 		this.connectStream();
+		this.initialized = true;
 	}
 	disconnectedCallback() {
 		this.disconnectStream();
+		this.initialized = false;
 	}
 	attributeChangedCallback(attrName, oldVal, newVal) {
-		this.connectStream();
+		if (this.initialized) {
+			this.connectStream();
+		}
 	}
 	
 	disconnectStream() {
@@ -36,8 +41,18 @@ class WebRTCStreamerElement extends HTMLElement {
 		this.disconnectStream();
 		
 		let webrtcurl = this.getAttribute("webrtcurl") || webrtcConfig.url;
-		let videostream = this.getAttribute("videostream") || webrtcConfig.defaultvideostream;
-		let audiostream = this.getAttribute("audiostream") || webrtcConfig.defaultaudiostream;
+		let url = this.getAttribute("url");
+		let videostream = webrtcConfig.defaultvideostream;
+		let audiostream = webrtcConfig.defaultaudiostream;
+		if (url) {
+			let urljson = JSON.parse(url);
+			if (urljson) {
+				videostream = urljson.video;
+				audiostream = urljson.audio;
+			} else {
+				videostream = url;
+			}
+		}
 		let options = this.getAttribute("options") || webrtcConfig.options;
 		
 		this.shadowDOM.getElementById("title").innerHTML = videostream; 
