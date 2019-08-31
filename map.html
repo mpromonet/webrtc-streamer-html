@@ -62,7 +62,10 @@
             let count = 0;
             markerList.forEach( (marker) => {
               if(bounds.contains(marker.getPosition())===true) {
+                marker.attach()
                 count++;
+              } else {
+                marker.detach()
               }
             })
             console.log("count:"+count)

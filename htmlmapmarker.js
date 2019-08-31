@@ -1,27 +1,28 @@
 class HTMLMapMarker extends google.maps.OverlayView {
     constructor(args) {
       super();
-      this.latlng = args.latlng;
-      this.html = args.html;
+      this._latlng = args.latlng;
+      this._html = args.html;
+      this._map = args.map;
       this.setMap(args.map);
     }
   
     createDiv() {
       this.div = document.createElement('div');
       this.div.style.position = 'absolute';
-      if (this.html) {
-        this.div.innerHTML = this.html;
-
-        google.maps.event.addDomListener(this.div, 'click', (event) => {
-          event.stopPropagation();
-
-          google.maps.event.trigger(this, 'click', event);
-        });        
+      if (this._html) {
+        this.div.innerHTML = this._html;
       }
+
+      google.maps.event.addDomListener(this.div, 'click', (event) => {
+        event.stopPropagation();
+
+        google.maps.event.trigger(this, 'click', event);
+      });        
     }
   
     positionDiv() {
-      const point = this.getProjection().fromLatLngToDivPixel(this.latlng);
+      const point = this.getProjection().fromLatLngToDivPixel(this._latlng);
       if (point) {
         const left = point.x - this.div.clientWidth/2;
         this.div.style.left = `${left}px`;
@@ -41,17 +42,29 @@ class HTMLMapMarker extends google.maps.OverlayView {
       this.positionDiv();
     }
   
-    remove() {
+    onRemove() {
       if (this.div) {
         this.div.parentNode.removeChild(this.div);
         this.div = null;
       }
     }
-  
+
     getPosition() {
-      return this.latlng;
+      return this._latlng;
     }
-  
+
+    detach() {
+      if (this.getMap()) {
+        this.setMap(null);
+      }
+    };
+
+    attach() {
+      if (!this.getMap()) {
+        this.setMap(this._map);
+      }
+    };
+
   }
   
   
