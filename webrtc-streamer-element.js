@@ -4,7 +4,7 @@ import "./webrtcstreamer.js";
 
 class WebRTCStreamerElement extends HTMLElement {
 	static get observedAttributes() {
-		return ['url', 'options', 'webrtcurl', 'notitle'];
+		return ['url', 'options', 'webrtcurl', 'notitle', 'width', 'height'];
 	}  
 	
 	constructor() {
@@ -30,7 +30,11 @@ class WebRTCStreamerElement extends HTMLElement {
 	attributeChangedCallback(attrName, oldVal, newVal) {
 		if (attrName === "notitle") {
 			this.titleElement.style.visibility = "hidden";
-		} else if (this.initialized) {
+		} else if (attrName === "width") {
+			this.videoElement.style.width = newVal;
+		} else if (attrName === "height") {
+			this.videoElement.style.height = newVal;
+		} if (this.initialized) {
 			this.connectStream();
 		}
 	}

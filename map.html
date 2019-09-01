@@ -39,7 +39,7 @@
               let marker = new HTMLMapMarker({
                 latlng,
                 map,
-                html: `<webrtc-streamer id="${key}" url='{"video":"${key}"}' options='width=64&height=48&rtptransport=tcp&timeout=60' notitle></webrtc-streamer>`,
+                html: `<webrtc-streamer id="${key}" url='{"video":"${key}"}' options='width=64&height=48&rtptransport=tcp&timeout=60' notitle width='100%' height='100%'></webrtc-streamer>`,
                 width,
                 height
               });      
@@ -48,7 +48,7 @@
                 let focusMarker = new HTMLMapMarker({
                   latlng,
                   map,
-                  html: `<webrtc-streamer id="${key}-focus" url='{"video":"${key}"}' options='width=640&height=480&rtptransport=tcp&timeout=60'></webrtc-streamer>`,
+                  html: `<webrtc-streamer id="${key}-focus" url='{"video":"${key}"}' options='width=640&height=480&rtptransport=tcp&timeout=60' width='100%' height='100%'></webrtc-streamer>`,
                   width: 640,
                   height: 480
                 });      
