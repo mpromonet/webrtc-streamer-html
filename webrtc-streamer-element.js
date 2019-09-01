@@ -28,11 +28,10 @@ class WebRTCStreamerElement extends HTMLElement {
 		this.initialized = false;
 	}
 	attributeChangedCallback(attrName, oldVal, newVal) {
-		if (this.initialized) {
-			this.connectStream();
-		}
 		if (attrName === "notitle") {
 			this.titleElement.style.visibility = "hidden";
+		} else if (this.initialized) {
+			this.connectStream();
 		}
 	}
 	
@@ -45,10 +44,12 @@ class WebRTCStreamerElement extends HTMLElement {
 	connectStream() {
 		this.disconnectStream();
 		
-		let webrtcurl = this.getAttribute("webrtcurl") || webrtcConfig.url;
-		let url = this.getAttribute("url");
+		const webrtcurl = this.getAttribute("webrtcurl") || webrtcConfig.url;
+
 		let videostream = webrtcConfig.defaultvideostream;
 		let audiostream = webrtcConfig.defaultaudiostream;
+
+		const url = this.getAttribute("url");
 		if (url) {
 			let urljson = JSON.parse(url);
 			if (urljson) {
@@ -58,9 +59,12 @@ class WebRTCStreamerElement extends HTMLElement {
 				videostream = url;
 			}
 		}
-		let options = this.getAttribute("options") || webrtcConfig.options;
+		const options = this.getAttribute("options") || webrtcConfig.options;
 		
-		this.titleElement.innerHTML = videostream; 
+		const notitle = this.getAttribute("notitle");
+		if (notitle === null) {
+			this.titleElement.innerHTML = videostream; 
+		}
 		
 		this.webRtcServer = new WebRtcStreamer(this.videoElement, webrtcurl);
 		this.webRtcServer.connect(videostream, audiostream, options);

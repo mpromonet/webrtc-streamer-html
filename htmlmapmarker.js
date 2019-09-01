@@ -4,12 +4,18 @@ class HTMLMapMarker extends google.maps.OverlayView {
       this._latlng = args.latlng;
       this._html = args.html;
       this._map = args.map;
+      this._width = args.width;
+      this._height = args.height;
       this.setMap(args.map);
     }
   
     createDiv() {
       this.div = document.createElement('div');
       this.div.style.position = 'absolute';
+      if (this._width && this._height) {
+        this.div.style.width = this._width;
+        this.div.style.height = this._height;
+      }
       if (this._html) {
         this.div.innerHTML = this._html;
       }
@@ -65,6 +71,14 @@ class HTMLMapMarker extends google.maps.OverlayView {
       }
     };
 
+    setSize(width, height) {
+      this._width = width;
+      this._height = height;   
+      if (this.div) {
+          this.div.style.width = this._width;
+          this.div.style.height = this._height;   
+      }   
+    }
   }
   
   
