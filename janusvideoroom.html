@@ -1,28 +1,17 @@
 <html>
 <head>
 <script src="libs/request.min.js" ></script>
-<script src="libs/ag-grid.min.js"></script>
-<script src="libs/adapter.min.js"></script>
 <script src="libs/EventEmitter.min.js" ></script>
 <script src="janusvideoroom.json" ></script>
 <script src="janusvideoroom.js" ></script>
 <script src="webrtcstreamer.json" ></script>
-<script src="webrtcstreamer.js" ></script>
-<style type="text/css">
-.cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-footer {
-  text-align: center; 
-}
-</style> 
+<link rel="stylesheet" type="text/css" href="styles.css"> 
 </head>
 <body> 
 	Janus Url:<input id="janusUrl" type="text" size="50" /> 
 	Room id:<input id="janusRoom" type="number" />
-	<div id="myGrid" style="height: 80%;" class="ag-fresh"></div>
+	<input type="button" onclick="openroom()" value="OpenRoom" />
+	<nav id="menu"></nav>
 	<footer id="footer"></footer>
 </body>
 <script>
@@ -30,117 +19,88 @@ footer {
 	document.querySelector('#janusUrl').value  = janusRoomConfig.url;
 	document.querySelector('#janusRoom').value = janusRoomConfig.roomId;
 
+	function getText(url) {
+		var text;
+		if (url.video) {
+			text = url.video + " ";
+		}
+		if (url.audio) {
+			text += url.audio + " ";
+		}
+		return text;
+	}	
+
+	function clientCallBack (name, status) {
+		console.log("clientCallBack name:"+ name + " status:"+ status);
+
+		var navId = "nav_" + name;
+		var navElt = document.querySelector(`#${navId}`);
+		if (navElt) {
+			if (status == "down") {
+				navElt.className = "";
+			} else if (status == "up") {
+				navElt.className = "active";
+			}
+		}
+	}
+
 	var bus = new EventEmitter();
 	bus.addListener('state', clientCallBack);	
 	
-	var janus;	
+	var janus = {};		
+
 	
-	// columns
-	var columnDefs = [
-	    { headerName: "Video"  , field: "video" , cellClass: "cell" ,  width:64,   
-              cellRenderer: function(params) { 
-	            var videoElement = document.createElement('video');
-                    videoElement.id = JSON.stringify(params.data.url);
-		    videoElement.className = "cell";
-		    videoElement.width = 128;
-		    videoElement.height = 96;
-		    videoElement.muted = true;
-		    videoElement.addEventListener('click', function() {
-		         window.open(webrtcConfig.url + "/webrtcstreamer.html?video=" + encodeURIComponent(params.data.url.video) + "&audio=" + encodeURIComponent(params.data.url.audio));
-                    });
-                    return videoElement;
-              } 
-            },
-	    { headerName: "Url"    , field: "url"   , cellClass: "cell" , 
-              cellRenderer: function(params) { 
-                    var url = "video:" + params.value.video
-                    if (params.value.audio) {
-                        url += "<br/>audio:" + params.value.audio
-                    }
-                    return url;
-              } 
-            },
-	    { headerName: "Status" , field: "status", cellClass: "cell" , 
-              cellRenderer: function(params) { 
-                    return '<b>' + params.value.toUpperCase() + '</b>'; 
-              } 
-            },
-	    { headerName: "RoomId" , field: "roomid", cellClass: "cell"  },
-	    { headerName: "Action" , cellClass: "cell", 
-	      field: "action", 
-	      cellRenderer: function(params) { 
-	        var eDiv = document.createElement('div');
-	        var eButton = document.createElement('button');
-		eButton.innerHTML = params.value;
-		eDiv.appendChild(eButton);
-		eButton.addEventListener('click', function() {
-			if (params.value === "join") {
-				params.data.roomid = document.querySelector('#janusRoom').value;
-				params.api.refreshCells([params.node], ['roomid']);
-				
-				if (!janus) {
-					janus = new JanusVideoRoom(document.querySelector('#janusUrl').value, webrtcConfig.url, bus);
-				}
-				janus.join(parseInt(params.data.roomid), params.data.url, JSON.stringify(params.data.url));
-				
-			} else {
-				janus.leave(parseInt(params.data.roomid), params.data.url, JSON.stringify(params.data.url));
-			}
-		});
+	function connect(webrtcStream, user) {	
+		var serverName = document.querySelector('#janusUrl').value;
+		var roomName = parseInt(document.querySelector('#janusRoom').value);	
 
-		return eDiv;
-              } 
-	    }
-	];
-
-	// options
-	var gridOptions = {
-		enableFilter: true,
-		enableSorting: true,
-		enableColResize: true,
-		columnDefs: columnDefs,
-		rowHeight: 60,
-		onGridReady: function($event) { $event.api.sizeColumnsToFit(); }
-	};
-	
-	// fill grid
-	new agGrid.Grid(document.querySelector('#myGrid'), gridOptions);	
-
-	function clientCallBack(name, status) {		
-		var updatedNodes = [];
-		gridOptions.api.forEachNode( function(node) {
-			var data = node.data;
-			if (JSON.stringify(data.url) === name) {
-			    data.status = status;
-			    if (status === "up") {
-				data.action = "leave";
-			    } else if (status === "down") {
-				data.roomid = "";
-				data.action = "join";
-			    }
-			    updatedNodes.push(node);
-			}
-		});
-		gridOptions.api.refreshCells({rowNodes:updatedNodes, columns:['status','action','roomid']});
+		let janusserver = new JanusVideoRoom(serverName, webrtcConfig.url, bus);
+		janusserver.join(roomName, webrtcStream, user);
+		janus[serverName] = janusserver;
 	}
+	
+	function disconnect(webrtcStream, user) {
+		var serverName = document.querySelector('#janusUrl').value;
+		var roomName = parseInt(document.querySelector('#janusRoom').value);		
+
+		let janusserver = janus[serverName];
+		if (janusserver) {
+			janusserver.leave(roomName, webrtcStream, user);
+		}
+	}
+	
+	function openroom() {
+		var serverName = document.querySelector('#janusUrl').value;
+		var roomName = document.querySelector('#janusRoom').value;		
+		window.open( location.protocol + "//" + serverName + "/videoroomtest.html");
+	}	
 	
 	// ------------------------------------------
 	// init device list 
 	// ------------------------------------------	
 	function onGetDeviceList(remoteDeviceList) {
-	
-		var rowData = [];
-		remoteDeviceList.forEach(function(item) {
-			rowData.push({url: item , status:"down", action:"join" })
-		});
-		gridOptions.api.setRowData(rowData);
-		
-		// connect video
-		gridOptions.api.forEachNode( function(node) {
-			var data = node.data;
-			node.webrtc = new WebRtcStreamer(JSON.stringify(data.url), webrtcConfig.url)
-			node.webrtc.connect(data.url.video, data.url.audio, janusRoomConfig.options);
-		});
+		var deviceList = [];
+		if (remoteDeviceList) {
+			deviceList.push.apply( deviceList, remoteDeviceList );
+		}
+
+		// create navigation menu
+		var urllist = document.getElementById("menu");
+		for (var dev in deviceList) {
+			var url = deviceList[dev];
+			var option = document.createElement("a");
+			option.url = url;
+			option.text = getText(url);
+			option.id   = "nav_" + url.video;
+			option.onclick = function () { 
+				if (this.className === "active") {
+					disconnect(this.url, this.url.video); 
+				} else {
+					connect(this.url, this.url.video); 
+				}
+			}
+			urllist.appendChild(option);
+		}		
 	}
 	
 	// ------------------------------------------
@@ -165,12 +125,6 @@ footer {
 	
 	// unload
 	window.onbeforeunload = function() { 
-		gridOptions.api.forEachNode( function(node) {
-			if (node.webrtc) {
-				node.webrtc.disconnect();
-				node.webrtc = null;
-			}
-		});
 	}
 </script>
 </html>

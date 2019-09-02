@@ -360,4 +360,8 @@ JanusVideoRoom.prototype.onError = function(status) {
 return JanusVideoRoom;
 })();
 
-module.exports = JanusVideoRoom;
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined')
+	module.exports = JanusVideoRoom;
+else
+	window.JanusVideoRoom = JanusVideoRoom;
+
