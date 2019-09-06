@@ -45,11 +45,14 @@
                 height
               });      
               google.maps.event.addListener(marker, 'click', function() {
+                const div = map.getDiv();
 
                 let focusMarker = new HTMLMapMarker({
-                  latlng,
+                  latlng: map.getCenter(),
                   map,
-                  html: `<webrtc-streamer id="${key}-focus" url='{"video":"${key}"}' options='rtptransport=tcp&timeout=60' notitle width='100%' height='100%'></webrtc-streamer>`
+                  html: `<webrtc-streamer id="${key}-focus" url='{"video":"${key}"}' options='rtptransport=tcp&timeout=60' notitle width='100%' height='100%'></webrtc-streamer>`,
+                  width: div.clientWidth,
+                  height: div.clientHeight
                 });      
                 google.maps.event.addListener(focusMarker, 'click', function() {
                   focusMarker.detach();
