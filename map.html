@@ -4,7 +4,14 @@
             <style>
             #map {
                 width: 100%;
+                height: 90%;
+                margin: 0 auto;
+            }
+            #focus {
+                width: 100%;
                 height: 100%;
+                position: absolute;
+                margin: 0 auto;
             }
             </style>
             <script src="./webrtcstreamer.json"></script>
@@ -12,10 +19,12 @@
             <script src="./libs/request.min.js"></script>
             <script src="https://maps.googleapis.com/maps/api/js?v=3"></script>
             <script src="./htmlmapmarker.js"></script>
+            <script type="module" src="webrtc-streamer-footer-element.js"></script>
     </head>
 	<body>
        
        <div id="map"></div>
+       <webrtc-streamer-footer></webrtc-streamer-footer>
 
        <script>
       request("GET" , webrtcConfig.url + "/api/getMediaList").done( (response) => { 
@@ -29,6 +38,7 @@
 
          const width = 64;
          const height = 48;
+         const webrtcoptions = 'rtptransport=tcp&timeout=60';
          const mapOptions = {
            zoom: 2,
            center: new google.maps.LatLng(0,0)
@@ -40,23 +50,20 @@
               let marker = new HTMLMapMarker({
                 latlng,
                 map,
-                html: `<webrtc-streamer id="${key}" url='{"video":"${key}"}' options='width=64&height=48&rtptransport=tcp&timeout=60' notitle width='100%' height='100%'></webrtc-streamer>`,
+                html: `<webrtc-streamer id="${key}" url='{"video":"${key}"}' options='width=64&height=48&${webrtcoptions}' notitle width='100%' height='100%'></webrtc-streamer>`,
                 width,
                 height
               });      
               google.maps.event.addListener(marker, 'click', function() {
-                const div = map.getDiv();
+                const mapdiv = map.getDiv();
 
-                let focusMarker = new HTMLMapMarker({
-                  latlng: map.getCenter(),
-                  map,
-                  html: `<webrtc-streamer id="${key}-focus" url='{"video":"${key}"}' options='rtptransport=tcp&timeout=60' notitle width='100%' height='100%'></webrtc-streamer>`,
-                  width: div.clientWidth,
-                  height: div.clientHeight
-                });      
-                google.maps.event.addListener(focusMarker, 'click', function() {
-                  focusMarker.detach();
-                });
+                let div = document.createElement("div");
+                div.id = "focus";
+                div.innerHTML = `<webrtc-streamer id="${key}-focus" url='{"video":"${key}"}' options='${webrtcoptions}' notitle width='100%' height='100%'></webrtc-streamer>`;
+                div.onclick = function() {
+                  mapdiv.removeChild(div);
+                }
+                mapdiv.appendChild(div);
               });
               markerList[key] = marker;     
          }
