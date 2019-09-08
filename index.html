@@ -158,7 +158,19 @@
 				videoelt.id = videoTag;
 				videoelt.title = getText(url);
 				videoelt.muted = true;
-				videoelt.onclick = function() { window.open(webrtcConfig.url + "/webrtcstreamer.html?video=" + encodeURIComponent(url.video) + "&audio=" + encodeURIComponent(url.audio) + "&options=" + encodeURIComponent(argoptions)); }
+				videoelt.onclick = function() { 
+					let webstreamurl = webrtcConfig.url + "/webrtcstreamer.html?";
+					if (url.video) {
+						webstreamurl += "video=" + encodeURIComponent(url.video) + "&";
+					}
+					if (url.audio) {
+						webstreamurl += "audio=" + encodeURIComponent(url.audio) + "&";
+					}
+					if (argoptions) {
+						webstreamurl += "options=" + encodeURIComponent(argoptions) + "&";
+					}
+					window.open(webstreamurl); 
+				}
 				divelt.appendChild(videoelt);
 				contentDiv.appendChild(divelt);
 			}			
