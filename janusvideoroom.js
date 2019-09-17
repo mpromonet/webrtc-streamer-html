@@ -156,28 +156,40 @@ JanusVideoRoom.prototype.onJoinRoomResult = function(dataJson,janusroomid,url,na
 	if (dataJson.plugindata.data.videoroom === "joined") {	
 		// register connection
 		this.connection[janusroomid + "_" + url + "_" + name] = {"sessionId":sessionId, "pluginId": pluginid };
-		
-		// notify new state
-		this.emit(name, "joined");
-		
-		var peerid = Math.random().toString();
-		
-		var videourl = url.video || url;
-		var createOfferUrl = this.srvurl + "/api/createOffer?peerid="+ peerid+"&url="+encodeURIComponent(videourl);
-		if (url.audio) {
-			createOfferUrl += "&audiourl="+encodeURIComponent(url.audio);
+
+		// member of the room
+		var publishers = dataJson.plugindata.data.publishers;
+		for (var i=0; i<publishers.length; i++) {
+			var publisher = publishers[i];
+			this.emit(publisher.display, "up");
 		}
-		var bind = this;
-		request("GET" , createOfferUrl)
-			.done( function (response) { 
-				if (response.statusCode === 200) {
-					bind.onCreateOffer(JSON.parse(response.body), name, sessionId, pluginid, peerid);
-				}
-				else {
-					bind.onError(response.statusCode);
-				}
+		
+		if (name) {
+			// notify new state
+			this.emit(name, "joined");
+			
+			var peerid = Math.random().toString();
+			
+			var videourl = url.video || url;
+			var createOfferUrl = this.srvurl + "/api/createOffer?peerid="+ peerid+"&url="+encodeURIComponent(videourl);
+			if (url.audio) {
+				createOfferUrl += "&audiourl="+encodeURIComponent(url.audio);
 			}
-		);		
+			var bind = this;
+			request("GET" , createOfferUrl)
+				.done( function (response) { 
+					if (response.statusCode === 200) {
+						bind.onCreateOffer(JSON.parse(response.body), name, sessionId, pluginid, peerid);
+					}
+					else {
+						bind.onError(response.statusCode);
+					}
+				}
+			);		
+		} else {
+			// start long polling
+			this.longpoll(null, name, sessionId);	
+		}
 	} else {
 		this.emit(name, "joining room failed");
 	}
@@ -338,6 +350,14 @@ JanusVideoRoom.prototype.longpoll = function(dataJson, name, sessionId) {
 		else if (dataJson.janus === "hangup") {
 			// notify connection
 			this.emit(name, "down");
+		}
+		else if (dataJson.janus === "event") {
+			// member of the room
+			var publishers = dataJson.plugindata.data.publishers;
+			for (var i=0; i<publishers.length; i++) {
+				var publisher = publishers[i];
+				this.emit(publisher.display, "up");
+			}
 		}
 	}
 	

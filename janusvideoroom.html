@@ -10,6 +10,7 @@
 <body> 
 	Janus Url:<input id="janusUrl" type="text" size="50" /> 
 	Room id:<input id="janusRoom" type="number" />
+	<input type="button" onclick="connect()" value="ConnectRoom" />
 	<input type="button" onclick="openroom()" value="OpenRoom" />
 	<nav id="menu"></nav>
 	<footer id="footer"></footer>
@@ -55,11 +56,30 @@
 		var roomName = parseInt(document.querySelector('#janusRoom').value);	
 
 		let janusserver = new JanusVideoRoom(serverName, webrtcConfig.url, bus);
-		janusserver.join(roomName, webrtcStream, user);
 		janus[serverName] = janusserver;
+		if (janusserver) {
+			janusserver.join(roomName);
+		}
+		return janusserver;
 	}
 	
 	function disconnect(webrtcStream, user) {
+		var serverName = document.querySelector('#janusUrl').value;
+
+		let janusserver = janus[serverName];
+		janus[serverName] = undefined;
+	}
+
+	function join(webrtcStream, user) {	
+		var roomName = parseInt(document.querySelector('#janusRoom').value);	
+
+		let janusserver = connect();
+		if (janusserver) {
+			janusserver.join(roomName, webrtcStream, user);
+		}
+	}
+
+	function leave(webrtcStream, user) {
 		var serverName = document.querySelector('#janusUrl').value;
 		var roomName = parseInt(document.querySelector('#janusRoom').value);		
 
@@ -68,11 +88,12 @@
 			janusserver.leave(roomName, webrtcStream, user);
 		}
 	}
-	
+
+
 	function openroom() {
 		var serverName = document.querySelector('#janusUrl').value;
 		var roomName = document.querySelector('#janusRoom').value;		
-		window.open( location.protocol + "//" + serverName + "/videoroomtest.html");
+		window.open( serverName + "/videoroomtest.html");
 	}	
 	
 	// ------------------------------------------
@@ -94,9 +115,9 @@
 			option.id   = "nav_" + url.video;
 			option.onclick = function () { 
 				if (this.className === "active") {
-					disconnect(this.url, this.url.video); 
+					leave(this.url, this.url.video); 
 				} else {
-					connect(this.url, this.url.video); 
+					join(this.url, this.url.video); 
 				}
 			}
 			urllist.appendChild(option);
