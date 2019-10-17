@@ -69,7 +69,8 @@ class WebRTCStreamerElement extends HTMLElement {
 		if (notitle === null) {
 			this.titleElement.innerHTML = videostream; 
 		}
-		
+		this.videoElement.title = videostream;
+
 		this.webRtcServer = new WebRtcStreamer(this.videoElement, webrtcurl);
 		this.webRtcServer.connect(videostream, audiostream, options);
 	}
