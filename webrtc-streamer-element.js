@@ -48,34 +48,33 @@ class WebRTCStreamerElement extends HTMLElement {
 	connectStream() {
 		this.disconnectStream();
 		
-		const webrtcurl = this.getAttribute("webrtcurl") || webrtcConfig.url;
+		const webrtcurl = this.getAttribute("webrtcurl");
 
-		let videostream = webrtcConfig.defaultvideostream;
-		let audiostream = webrtcConfig.defaultaudiostream;
+		let videostream;
+		let audiostream;
 
 		const url = this.getAttribute("url");
 		if (url) {
-			let urljson = JSON.parse(url);
-			if (urljson) {
+			try {
+				let urljson = JSON.parse(url);
 				videostream = urljson.video;
 				audiostream = urljson.audio;
-			} else {
+			} catch (e) {
 				videostream = url;
 			}
-		}
-		const options = this.getAttribute("options") || webrtcConfig.options;
-		
-		const notitle = this.getAttribute("notitle");
-		if (notitle === null) {
-			this.titleElement.innerHTML = videostream; 
-		}
-		this.videoElement.title = videostream;
+			
+			const options = this.getAttribute("options");
+			
+			const notitle = this.getAttribute("notitle");
+			if (notitle === null) {
+				this.titleElement.innerHTML = videostream; 
+			}
+			this.videoElement.title = videostream;
 
-		this.webRtcServer = new WebRtcStreamer(this.videoElement, webrtcurl);
-		this.webRtcServer.connect(videostream, audiostream, options);
-	}
-	
-	
+			this.webRtcServer = new WebRtcStreamer(this.videoElement, webrtcurl);
+			this.webRtcServer.connect(videostream, audiostream, options);
+		}
+	}	
 }
 
 customElements.define('webrtc-streamer', WebRTCStreamerElement);
