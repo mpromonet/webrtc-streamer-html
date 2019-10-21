@@ -354,9 +354,11 @@ JanusVideoRoom.prototype.longpoll = function(dataJson, name, sessionId) {
 		else if (dataJson.janus === "event") {
 			// member of the room
 			var publishers = dataJson.plugindata.data.publishers;
-			for (var i=0; i<publishers.length; i++) {
-				var publisher = publishers[i];
-				this.emit(publisher.display, "up");
+			if (publishers) {
+				for (var i=0; i<publishers.length; i++) {
+					var publisher = publishers[i];
+					this.emit(publisher.display, "up");
+				}	
 			}
 		}
 	}
