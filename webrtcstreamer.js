@@ -158,15 +158,15 @@ WebRtcStreamer.prototype.createPeerConnection = function() {
 	pc.onaddstream    = function(evt) { bind.onAddStream.call(bind,evt); };
 	pc.oniceconnectionstatechange = function(evt) {  
 		console.log("oniceconnectionstatechange  state: " + pc.iceConnectionState);
-		if (this.videoElement) {
+		if (bind.videoElement) {
 			if (pc.iceConnectionState === "connected") {
-				this.videoElement.style.opacity = "1.0";
+				bind.videoElement.style.opacity = "1.0";
 			}			
 			else if (pc.iceConnectionState === "disconnected") {
-				this.videoElement.style.opacity = "0.25";
+				bind.videoElement.style.opacity = "0.25";
 			}			
 			else if ( (pc.iceConnectionState === "failed") || (pc.iceConnectionState === "closed") )  {
-				this.videoElement.style.opacity = "0.5";
+				bind.videoElement.style.opacity = "0.5";
 			} else if (pc.iceConnectionState === "new") {
 				bind.getIceCandidate.call(bind)
 			}

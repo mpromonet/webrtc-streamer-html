@@ -9,13 +9,30 @@ class WebRTCStreamerFooterElement extends HTMLElement {
 					<footer id="footer"></footer>
 					`;
 	}
+
+	static get observedAttributes() {
+		return ['webrtcurl'];
+	}  
+
+	attributeChangedCallback(attrName, oldVal, newVal) {
+		if (attrName === "webrtcurl") {
+			this.fillFooter();
+		}
+	}
+
 	connectedCallback() {
+		this.fillFooter();
+	}
+
+	fillFooter() {
 		let footerElement = this.shadowDOM.getElementById("footer");
-		request("GET" , webrtcConfig.url + "/api/version").done( function (response) { 
+		const webrtcurl = this.getAttribute("webrtcurl");
+		request("GET" , webrtcurl + "/api/version").done( function (response) { 
 			footerElement.innerHTML = "<p><a href='https://github.com/mpromonet/webrtc-streamer'>WebRTC-Streamer</a> " + JSON.parse(response.body).split(" ")[0] + "</p>";			
 		});	
 	
 	}
+
 }
 
 customElements.define('webrtc-streamer-footer', WebRTCStreamerFooterElement);
