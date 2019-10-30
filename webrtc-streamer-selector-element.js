@@ -2,7 +2,7 @@ import "./libs/request.min.js";
 
 class WebRTCStreamerSelectorElement extends HTMLElement {	
 	static get observedAttributes() {
-		return ['selected'];
+		return ['selected', 'webrtcurl'];
 	}  	
 	constructor() {
 		super(); 
@@ -13,8 +13,28 @@ class WebRTCStreamerSelectorElement extends HTMLElement {
 					`;
 	}
 	connectedCallback() {
+		this.fillList();
+	}
+	
+	attributeChangedCallback(attrName, oldVal, newVal) {
+		if (attrName === "selected") {
+			this.selected = newVal;
+			let mediaList = this.shadowDOM.getElementById("mediaList");
+			for (const option of mediaList.getElementsByTagName('option')) {
+				if (option === newVal) {
+					option.selected = true;
+				}
+			}
+
+		} else if (attrName === "webrtcurl") {
+			this.fillList();
+		}
+	}	
+
+	fillList() {
 		let mediaList = this.shadowDOM.getElementById("mediaList");
-		request("GET" , webrtcConfig.url + "/api/getMediaList").done( (response) => { 
+		const webrtcurl = this.getAttribute("webrtcurl") || "";
+		request("GET" , webrtcurl + "/api/getMediaList").done( (response) => { 
 			JSON.parse(response.body).forEach( (media) => {
 				var newOption = document.createElement("option");
 				newOption.text = media.video;
@@ -42,12 +62,6 @@ class WebRTCStreamerSelectorElement extends HTMLElement {
 				  }));		
 			}
 	}
-	
-	attributeChangedCallback(attrName, oldVal, newVal) {
-		if (attrName === "selected") {
-			this.selected = newVal;
-		}
-	}	
 }
 
 customElements.define('webrtc-streamer-selector', WebRTCStreamerSelectorElement);
