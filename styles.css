@@ -14,3 +14,11 @@ h2 {
 footer {
     text-align: center; 
 }
+div {
+    margin: 0 auto;
+    text-align: center; 
+}
+button {
+    margin: 0 auto;
+    display: block;
+}

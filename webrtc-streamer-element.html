@@ -4,10 +4,12 @@
     <script type="module" src="webrtc-streamer-element.js"></script>
     <script type="module" src="webrtc-streamer-footer-element.js"></script>
     <script type="module" src="webrtc-streamer-selector-element.js"></script>
+    <script type="module" src="webrtc-streamer-options-element.js"></script>
 </head>
 <body>
     <webrtc-streamer-selector id="selector"></webrtc-streamer-selector>
     <webrtc-streamer id="stream"></webrtc-streamer>
+    <webrtc-streamer-options id="options" options="rtptransport=tcp&timeout=60&width=0&height=0&bitrate=0"></webrtc-streamer-options>
     <webrtc-streamer-footer></webrtc-streamer-footer>
 
     <script>
@@ -16,6 +18,10 @@
                 let streamElement = document.getElementById("stream");
                 streamElement.setAttribute('url', event.detail.url);
             });
+            document.getElementById("options").addEventListener('change', (event) => {
+                let streamElement = document.getElementById("stream");
+                streamElement.setAttribute('options', event.detail.options);
+            });            
         });        
         </script>
 </body>
