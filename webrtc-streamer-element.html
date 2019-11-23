@@ -16,6 +16,8 @@
         customElements.whenDefined('webrtc-streamer').then(() => {
             document.getElementById("selector").addEventListener('change', (event) => {
                 let streamElement = document.getElementById("stream");
+                let optionsElement = document.getElementById("options");
+                streamElement.setAttribute('options', optionsElement.getAttribute('options'));
                 streamElement.setAttribute('url', event.detail.url);
             });
             document.getElementById("options").addEventListener('change', (event) => {
