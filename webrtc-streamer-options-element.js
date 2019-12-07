@@ -54,11 +54,12 @@ class WebRTCStreamerOptionsElement extends HTMLElement {
 
 	notifyOptions()
 	{
+		this.setAttribute("options", this.params.toString());
 		this.dispatchEvent(new CustomEvent('change', {
-		detail: {
-		  options: this.params.toString(),
-		}
-	  }));
+			detail: {
+		  		options: this.params.toString(),
+			}
+	  	}));
 	}
 }
 
