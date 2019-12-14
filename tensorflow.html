@@ -1,0 +1,88 @@
+<html>
+<head>
+<script src="libs/tfjs"> </script>
+<script src="libs/coco-ssd"> </script>
+<script src="libs/request.min.js" ></script>
+<script src="libs/adapter.min.js" ></script>
+<script src="webrtcstreamer.js" ></script>
+    <style>
+        video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+        canvas{
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index:1
+        }
+    </style>
+</head>
+<body> 
+    <video id="video" muted >
+    </video>
+    <canvas id="canvas" >
+    </canvas>
+    <script>
+    var url = { video:"Scheveningen-3" };  
+    var options = "rtptransport=tcp&timeout=60";
+    if (typeof URLSearchParams != 'undefined') {
+        var params = new URLSearchParams(location.search);
+        if (params.has("video") || params.has("audio")) {
+            url = { video:params.get("video"), audio:params.get("audio") };
+        }
+        if (params.has("options")) {
+            options = params.get("options");
+        }
+    } 	    
+    var webRtcServer      = new WebRtcStreamer("video");
+    webRtcServer.connect(url.video, url.audio, options);
+    window.onbeforeunload = function() { webRtcServer.disconnect(); }
+    
+    // Load the model.
+    console.time('model');
+    cocoSsd.load().then(model => {
+    
+    console.log('model loaded');
+    console.timeEnd('model');
+
+    const video = document.getElementById('video');
+    video.addEventListener('loadeddata', (event) => {
+
+        window.setInterval(()=> {
+            console.time('predict');
+            // detect objects in the image.
+            model.detect(video).then(predictions => {
+                console.timeEnd('predict');
+                console.log('Predictions: ', predictions);
+
+                const c = document.getElementById('canvas');
+                c.width = video.videoWidth;
+                c.height = video.videoHeight;
+                const context = c.getContext('2d');
+                context.clearRect(0, 0, c.width, c.height);
+                context.font = '10px Arial';
+
+                console.log('number of detections: ', predictions.length);
+                for (let i = 0; i < predictions.length; i++) {
+                    context.beginPath();
+                    context.rect(...predictions[i].bbox);
+                    context.lineWidth = 1;
+                    context.strokeStyle = 'green';
+                    context.fillStyle = 'green';
+                    context.stroke();
+                    context.fillText(
+                    predictions[i].score.toFixed(3) + ' ' + predictions[i].class, predictions[i].bbox[0],
+                    predictions[i].bbox[1] > 10 ? predictions[i].bbox[1] - 5 : 10);
+                }
+            });
+        }, 1000);
+    });
+
+  });
+
+    </script>
+</body>
+</html>
