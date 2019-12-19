@@ -8,23 +8,38 @@
     <style>
         video {
             position: absolute;
-            top: 0;
-            left: 0;
             z-index: -1;
+            margin: 0 auto;
         }
-        canvas{
+        canvas {
             position: absolute;
-            top: 0;
-            left: 0;
-            z-index:1
+            z-index:1;
+            margin: 0 auto;
+        }
+        #container {
+            position: relative;
+        }
+        #content {
+            position: absolute;
+            height:100%;
+            width:100%;
+        }
+        #detections {
+            position: relative;
         }
     </style>
 </head>
 <body> 
-    <video id="video" muted >
-    </video>
-    <canvas id="canvas" >
-    </canvas>
+    <div id="container">
+        <div id="content">
+            <video id="video" muted >
+            </video>
+            <canvas id="canvas" >
+            </canvas>
+        </div>    
+    </div>
+    <div id="detections" >
+    </div>    
     <script>
     var url = { video:"Scheveningen-3" };  
     var options = "rtptransport=tcp&timeout=60";
@@ -40,49 +55,53 @@
     var webRtcServer      = new WebRtcStreamer("video");
     webRtcServer.connect(url.video, url.audio, options);
     window.onbeforeunload = function() { webRtcServer.disconnect(); }
-    
+
+    function runDetect(model, video) {
+        console.time('predict');
+
+        // detect objects in the image.
+        model.detect(video).then(predictions => {
+            console.timeEnd('predict');
+            console.log('Predictions: ', predictions);
+            const detections = document.getElementById('detections');
+            detections.innerHTML = "objects:" + predictions.length;
+
+            const c = document.getElementById('canvas');
+            const context = c.getContext('2d');
+            context.clearRect(0, 0, c.width, c.height);
+            context.font = '10px Arial';
+
+            console.log('number of detections: ', predictions.length);
+            for (let i = 0; i < predictions.length; i++) {
+                context.beginPath();
+                context.rect(...predictions[i].bbox);
+                context.lineWidth = 1;
+                context.strokeStyle = 'green';
+                context.fillStyle = 'green';
+                context.stroke();
+                context.fillText(
+                predictions[i].score.toFixed(3) + ' ' + predictions[i].class, predictions[i].bbox[0],
+                predictions[i].bbox[1] > 10 ? predictions[i].bbox[1] - 5 : 10);
+            };
+
+            window.setTimeout(()=> { runDetect(model, video) }, 0);
+        });
+    }
     // Load the model.
     console.time('model');
     cocoSsd.load().then(model => {
-    
-    console.log('model loaded');
-    console.timeEnd('model');
+        console.log('model loaded');
+        console.timeEnd('model');
 
-    const video = document.getElementById('video');
-    video.addEventListener('loadeddata', (event) => {
+        const video = document.getElementById('video');
+        video.addEventListener('loadeddata', () => {
+            const c = document.getElementById('canvas');
+            c.width = video.videoWidth;
+            c.height = video.videoHeight;
 
-        window.setInterval(()=> {
-            console.time('predict');
-            // detect objects in the image.
-            model.detect(video).then(predictions => {
-                console.timeEnd('predict');
-                console.log('Predictions: ', predictions);
-
-                const c = document.getElementById('canvas');
-                c.width = video.videoWidth;
-                c.height = video.videoHeight;
-                const context = c.getContext('2d');
-                context.clearRect(0, 0, c.width, c.height);
-                context.font = '10px Arial';
-
-                console.log('number of detections: ', predictions.length);
-                for (let i = 0; i < predictions.length; i++) {
-                    context.beginPath();
-                    context.rect(...predictions[i].bbox);
-                    context.lineWidth = 1;
-                    context.strokeStyle = 'green';
-                    context.fillStyle = 'green';
-                    context.stroke();
-                    context.fillText(
-                    predictions[i].score.toFixed(3) + ' ' + predictions[i].class, predictions[i].bbox[0],
-                    predictions[i].bbox[1] > 10 ? predictions[i].bbox[1] - 5 : 10);
-                }
-            });
-        }, 1000);
+            runDetect(model, video);
+        });
     });
-
-  });
-
     </script>
 </body>
 </html>
