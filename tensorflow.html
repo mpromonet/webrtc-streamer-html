@@ -18,19 +18,16 @@
             transform: translate(-50%, 0);
             z-index:1;
         }
-        div {
-            position: relative;
-        }
     </style>
 </head>
 <body> 
-    <div>
+    <div id="content">
         <video id="video" muted >
         </video>
         <canvas id="canvas" >
         </canvas>
-    </div>
-    <div id="detections">
+        <div id="detections">
+        </div>
     </div>
     <script>
     var url = { video:"Scheveningen-3" };  
@@ -57,8 +54,6 @@
             console.log('Predictions: ', predictions);
 
             const c = document.getElementById('canvas');
-            c.width = video.videoWidth;
-            c.height = video.videoHeight;
             const context = c.getContext('2d');
             context.clearRect(0, 0, c.width, c.height);
             context.font = '10px Arial';
@@ -87,16 +82,27 @@
         });
     }
 
-    // Load the model.
-    console.time('model');
-    cocoSsd.load().then(model => {
-        console.log('model loaded');
-        console.timeEnd('model');
 
-        const video = document.getElementById('video');
-        video.addEventListener('loadeddata', () => { runDetect(model, video)} );
+    const video = document.getElementById('video');
+    const imgLoaded = new Promise( (resolve,rejet) => {
+        video.addEventListener('loadeddata', (event) => { 
+            resolve(event)
+        });
+    } );
 
+    const modelLoaded = cocoSsd.load();
+
+    Promise.all([imgLoaded, modelLoaded]).then(([event,model]) => {
+        const c = document.getElementById('canvas');
+        c.width = video.videoWidth;
+        c.height = video.videoHeight;
+        const content = document.getElementById('content');
+        content.style.width = video.videoWidth;
+        content.style.height = video.videoHeight;
+
+        runDetect(model, video)
     });
+
 
     </script>
 </body>
