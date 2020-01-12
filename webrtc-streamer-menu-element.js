@@ -39,36 +39,52 @@ class WebRTCStreamerMenuElement extends HTMLElement {
 				var option = document.createElement("a");
 				option.text = media.video;
 				option.value = JSON.stringify(media);
-				option.id   = "nav_" + newOption.value;
-				if (this.selected && (this.selected === newOption.text) ) {
+				if (this.selected && (this.selected === option.text) ) {
 					option.className = "active";
 				}
 				option.onclick = () => { 
 					if (option.className === "active") {
 						option.className = "";
-						this.dispatchEvent(new CustomEvent('remove', {
-							detail: {
-							  url: option.value,
-							}
-						  }));					  					
-					} else {
-						option.className = "active";	
 						this.dispatchEvent(new CustomEvent('change', {
-							detail: {
-							  url: option.value,
-							}
-						  }));							
+							detail: { url: "" }
+						  }));
+					} else {
+						for (const opt of mediaList.getElementsByTagName('a')) {
+							opt.className = "";
+						}  							
+						this.dispatchEvent(new CustomEvent('change', {
+							detail: { url: option.value }
+						  }));
+						option.className = "active";	
 					}
 				}
-				mediaList.appendChild(newOption);
+				mediaList.appendChild(option);
 			});
+
+			var settings = document.createElement("a");
+			settings.onclick = () => { 
+				if (settings.className === "active") {
+					settings.className = "";
+					this.dispatchEvent(new CustomEvent('settings', {
+						detail: "off"
+					  }));						
+				} else {
+					settings.className = "active";
+					this.dispatchEvent(new CustomEvent('settings', {
+						detail: "on"
+					  }));						
+				}
+			}
+			var img = document.createElement("img");
+			img.src = "webrtc.png"
+			settings.appendChild(img);
+			mediaList.appendChild(settings);
+
 
 			for (const option of mediaList.getElementsByTagName('a')) {
 				if (option.className === "active") {
 					this.dispatchEvent(new CustomEvent('change', {
-						detail: {
-						  url: option.value,
-						}
+						detail: { url: option.value }
 					  }));						
 				}
 			}
