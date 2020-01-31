@@ -1,11 +1,16 @@
 <html>
 <head>
-<script src="libs/tfjs"> </script>
-<script src="libs/coco-ssd"> </script>
-<script src="libs/request.min.js" ></script>
-<script src="libs/adapter.min.js" ></script>
-<script src="webrtcstreamer.js" ></script>
+    <link rel="icon" type="image/png" href="webrtc.png" />
+    <script src="libs/tfjs"> </script>
+    <script src="libs/coco-ssd"> </script>
+    <script src="libs/request.min.js" ></script>
+    <script src="libs/adapter.min.js" ></script>
+    <script src="webrtcstreamer.js" ></script>
     <style>
+        h2 {
+            margin: 0 auto;
+            text-align: center; 
+        }
         video {
             margin: auto;
             left: 0;
@@ -21,91 +26,108 @@
             z-index:1;
         }
     </style>
+    <script>
+        var url;  
+        var options = "rtptransport=tcp&timeout=60";
+        if (typeof URLSearchParams != 'undefined') {
+            var params = new URLSearchParams(location.search);
+            if (params.has("video") || params.has("audio")) {
+                url = { video:params.get("video"), audio:params.get("audio") };
+            }
+            if (params.has("options")) {
+                options = params.get("options");
+            }
+        }       
+    
+        function runDetect(model, video) {
+    
+            console.time('predict');
+            // detect objects in the image.
+            model.detect(video).then(predictions => {
+                console.timeEnd('predict');
+                console.log('Predictions: ', predictions);
+    
+                const c = document.getElementById('canvas');
+                const context = c.getContext('2d');
+                context.clearRect(0, 0, c.width, c.height);
+                context.font = '10px Arial';
+    
+                console.log('number of detections: ', predictions.length);
+                for (let i = 0; i < predictions.length; i++) {
+                    context.beginPath();
+                    context.rect(...predictions[i].bbox);
+                    context.lineWidth = 2;
+                    context.strokeStyle = 'green';
+                    context.fillStyle = 'green';
+                    context.stroke();
+                    context.fillText(
+                    predictions[i].score.toFixed(3) + ' ' + predictions[i].class, predictions[i].bbox[0],
+                    predictions[i].bbox[1] > 10 ? predictions[i].bbox[1] - 5 : 10);
+                }
+    
+                const d = document.getElementById('detections');
+                d.innerHTML = "";
+                predictions.map( prediction => prediction.class ).forEach( (className) => {
+                    d.appendChild( document.createTextNode(className) )
+                    d.appendChild( document.createElement("br") )
+                } )
+     
+                window.setTimeout( ()=>{ runDetect(model,video); } , 0 )
+            });
+        }
+    
+        window.addEventListener("DOMContentLoaded", () => {
+ 
+            const urlLoaded = new Promise( (resolve,rejet) => {
+                if (url) {
+                    resolve(url)
+                } else {
+                    request("GET" , "/api/getMediaList").done( (response) => { 
+                        var mediaList = JSON.parse(response.body);
+                        resolve( mediaList.sort(() => .5 - Math.random())[0] );
+                    });
+                }
+            } ).then( (url) => {
+                var webRtcServer      = new WebRtcStreamer("video");
+                webRtcServer.connect(url.video, url.audio, options);
+                window.onbeforeunload = function() { webRtcServer.disconnect(); }
+
+                const video = document.getElementById('video');
+                document.getElementById('title').innerHTML = url.video;
+                const imgLoaded = new Promise( (resolve,rejet) => {
+                    video.addEventListener('loadeddata', (event) => { 
+                        resolve(event)
+                    });
+                } );
+        
+                const modelLoaded = cocoSsd.load();
+            
+                Promise.all([imgLoaded, modelLoaded]).then(([event,model]) => {
+                    const c = document.getElementById('canvas');
+                    c.width = video.videoWidth;
+                    c.height = video.videoHeight;
+                    const content = document.getElementById('content');
+                    content.style.width = video.videoWidth;
+                    content.style.height = video.videoHeight;
+        
+                    runDetect(model, video)
+                });
+
+            });     
+        })
+    
+        </script>
+    
 </head>
 <body> 
     <div id="content">
-        <video id="video" muted >
+        <h2 id="title"></h2>
+        <video id="video" muted controls >
         </video>
         <canvas id="canvas" >
         </canvas>
         <div id="detections">
         </div>
     </div>
-    <script>
-    var url = { video:"Scheveningen-3" };  
-    var options = "rtptransport=tcp&timeout=60";
-    if (typeof URLSearchParams != 'undefined') {
-        var params = new URLSearchParams(location.search);
-        if (params.has("video") || params.has("audio")) {
-            url = { video:params.get("video"), audio:params.get("audio") };
-        }
-        if (params.has("options")) {
-            options = params.get("options");
-        }
-    } 	    
-    var webRtcServer      = new WebRtcStreamer("video");
-    webRtcServer.connect(url.video, url.audio, options);
-    window.onbeforeunload = function() { webRtcServer.disconnect(); }
-
-    function runDetect(model, video) {
-
-        console.time('predict');
-        // detect objects in the image.
-        model.detect(video).then(predictions => {
-            console.timeEnd('predict');
-            console.log('Predictions: ', predictions);
-
-            const c = document.getElementById('canvas');
-            const context = c.getContext('2d');
-            context.clearRect(0, 0, c.width, c.height);
-            context.font = '10px Arial';
-
-            console.log('number of detections: ', predictions.length);
-            for (let i = 0; i < predictions.length; i++) {
-                context.beginPath();
-                context.rect(...predictions[i].bbox);
-                context.lineWidth = 1;
-                context.strokeStyle = 'green';
-                context.fillStyle = 'green';
-                context.stroke();
-                context.fillText(
-                predictions[i].score.toFixed(3) + ' ' + predictions[i].class, predictions[i].bbox[0],
-                predictions[i].bbox[1] > 10 ? predictions[i].bbox[1] - 5 : 10);
-            }
-
-            const d = document.getElementById('detections');
-            d.innerHTML = "";
-            predictions.map( prediction => prediction.class ).forEach( (className) => {
-                d.appendChild( document.createTextNode(className) )
-                d.appendChild( document.createElement("br") )
-            } )
- 
-            window.setTimeout( ()=>{ runDetect(model,video); } , 0 )
-        });
-    }
-
-
-    const video = document.getElementById('video');
-    const imgLoaded = new Promise( (resolve,rejet) => {
-        video.addEventListener('loadeddata', (event) => { 
-            resolve(event)
-        });
-    } );
-
-    const modelLoaded = cocoSsd.load();
-
-    Promise.all([imgLoaded, modelLoaded]).then(([event,model]) => {
-        const c = document.getElementById('canvas');
-        c.width = video.videoWidth;
-        c.height = video.videoHeight;
-        const content = document.getElementById('content');
-        content.style.width = video.videoWidth;
-        content.style.height = video.videoHeight;
-
-        runDetect(model, video)
-    });
-
-
-    </script>
 </body>
 </html>
