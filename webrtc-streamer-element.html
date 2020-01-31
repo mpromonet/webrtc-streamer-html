@@ -3,13 +3,13 @@
     <link rel="icon" type="image/png" href="webrtc.png" />
     <script type="module" src="webrtc-streamer-element.js"></script>
     <script type="module" src="webrtc-streamer-footer-element.js"></script>
-    <script type="module" src="webrtc-streamer-selector-element.js"></script>
+    <script type="module" src="webrtc-streamer-menu-element.js"></script>
     <script type="module" src="webrtc-streamer-options-element.js"></script>
 </head>
 <body>
-    <webrtc-streamer-selector id="selector"></webrtc-streamer-selector>
+    <webrtc-streamer-menu id="selector" selected="Scheveningen-3"></webrtc-streamer-menu>
     <webrtc-streamer id="stream"></webrtc-streamer>
-    <webrtc-streamer-options id="options" options="rtptransport=tcp&timeout=60&width=0&height=0&bitrate=0&rotation=0"></webrtc-streamer-options>
+    <webrtc-streamer-options id="options" options="rtptransport=tcp&timeout=60&width=0&height=0&bitrate=0&rotation=0" style="visibility:hidden"></webrtc-streamer-options>
     <webrtc-streamer-footer></webrtc-streamer-footer>
 
     <script>
@@ -24,7 +24,12 @@
             document.getElementById("options").addEventListener('change', (event) => {
                 let streamElement = document.getElementById("stream");
                 streamElement.setAttribute('options', event.detail.options);
-            });            
+            });
+            document.getElementById("selector").addEventListener('settings', (event) => {
+                let optionsElement = document.getElementById("options");
+                optionsElement.style.visibility = event.detail === "on" ? "visible" : "hidden";
+            });
+            
         });        
         </script>
 </body>
