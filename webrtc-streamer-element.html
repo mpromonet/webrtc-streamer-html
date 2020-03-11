@@ -7,27 +7,36 @@
     <script type="module" src="webrtc-streamer-options-element.js"></script>
 </head>
 <body>
-    <webrtc-streamer-menu id="selector" selected="Scheveningen-3"></webrtc-streamer-menu>
+    <webrtc-streamer-menu id="selector" ></webrtc-streamer-menu>
     <webrtc-streamer id="stream"></webrtc-streamer>
-    <webrtc-streamer-options id="options" options="rtptransport=tcp&timeout=60&width=0&height=0&bitrate=0&rotation=0" style="visibility:hidden"></webrtc-streamer-options>
+    <webrtc-streamer-options id="options" options="rtptransport=tcp&timeout=60&width=0&height=0&bitrate=0&rotation=0" style="display:none"></webrtc-streamer-options>
     <webrtc-streamer-footer></webrtc-streamer-footer>
 
     <script>
         customElements.whenDefined('webrtc-streamer').then(() => {
-            document.getElementById("selector").addEventListener('change', (event) => {
-                let streamElement = document.getElementById("stream");
-                let optionsElement = document.getElementById("options");
+            let selectorElement = document.getElementById("selector");
+            let streamElement = document.getElementById("stream");
+            let optionsElement = document.getElementById("options");
+            selectorElement.addEventListener('change', (event) => {
                 streamElement.setAttribute('url', '');
                 streamElement.setAttribute('options', optionsElement.getAttribute('options'));
                 streamElement.setAttribute('url', event.detail.url);
             });
-            document.getElementById("options").addEventListener('change', (event) => {
-                let streamElement = document.getElementById("stream");
-                streamElement.setAttribute('options', event.detail.options);
+            selectorElement.addEventListener('settings', (event) => {
+                optionsElement.style.display = event.detail === "on" ? "block" : "none";
             });
-            document.getElementById("selector").addEventListener('settings', (event) => {
-                let optionsElement = document.getElementById("options");
-                optionsElement.style.visibility = event.detail === "on" ? "visible" : "hidden";
+            selectorElement.addEventListener('init', (event) => {
+                let mediaList = event.detail;
+		if (mediaList.length > 0) {
+			let media = JSON.stringify(mediaList[0])
+			selectorElement.setAttribute('selected', media);
+                	streamElement.setAttribute('url', '');
+	                streamElement.setAttribute('options', optionsElement.getAttribute('options'));
+       		        streamElement.setAttribute('url', media);
+		}
+            });
+            document.getElementById("options").addEventListener('change', (event) => {
+                streamElement.setAttribute('options', event.detail.options);
             });
             
         });        

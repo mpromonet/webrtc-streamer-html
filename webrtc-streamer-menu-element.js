@@ -21,8 +21,9 @@ class WebRTCStreamerMenuElement extends HTMLElement {
 			this.selected = newVal;
 			let mediaList = this.shadowDOM.getElementById("mediaList");
 			for (const option of mediaList.getElementsByTagName('a')) {
-				if (option === newVal) {
+				if (option.value === newVal) {
 					option.selected = true;
+					option.className = "active";
 				}
 			}
 
@@ -54,12 +55,16 @@ class WebRTCStreamerMenuElement extends HTMLElement {
 						}  							
 						this.dispatchEvent(new CustomEvent('change', {
 							detail: { url: option.value }
-						  }));
+						}));
 						option.className = "active";	
 					}
 				}
 				mediaList.appendChild(option);
 			});
+                        this.dispatchEvent(new CustomEvent('init', {
+                                                detail: JSON.parse(response.body) 
+                        }));
+
 
 			var settings = document.createElement("a");
 			settings.onclick = () => { 
