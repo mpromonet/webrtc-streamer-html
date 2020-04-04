@@ -6,10 +6,13 @@
     <script src="libs/request.min.js" ></script>
     <script src="libs/adapter.min.js" ></script>
     <script src="webrtcstreamer.js" ></script>
+    <script src="tensorflow.js" ></script>
     <style>
         h2 {
-            margin: 0 auto;
-            text-align: center; 
+            margin: auto;
+            left: 0;
+            right: 0;   
+            text-align: center;
         }
         video {
             margin: auto;
@@ -38,44 +41,7 @@
                 options = params.get("options");
             }
         }       
-    
-        function runDetect(model, video) {
-    
-            console.time('predict');
-            // detect objects in the image.
-            model.detect(video).then(predictions => {
-                console.timeEnd('predict');
-                console.log('Predictions: ', predictions);
-    
-                const c = document.getElementById('canvas');
-                const context = c.getContext('2d');
-                context.clearRect(0, 0, c.width, c.height);
-                context.font = '10px Arial';
-    
-                console.log('number of detections: ', predictions.length);
-                for (let i = 0; i < predictions.length; i++) {
-                    context.beginPath();
-                    context.rect(...predictions[i].bbox);
-                    context.lineWidth = 2;
-                    context.strokeStyle = 'green';
-                    context.fillStyle = 'green';
-                    context.stroke();
-                    context.fillText(
-                    predictions[i].score.toFixed(3) + ' ' + predictions[i].class, predictions[i].bbox[0],
-                    predictions[i].bbox[1] > 10 ? predictions[i].bbox[1] - 5 : 10);
-                }
-    
-                const d = document.getElementById('detections');
-                d.innerHTML = "";
-                predictions.map( prediction => prediction.class ).forEach( (className) => {
-                    d.appendChild( document.createTextNode(className) )
-                    d.appendChild( document.createElement("br") )
-                } )
-     
-                window.setTimeout( ()=>{ runDetect(model,video); } , 0 )
-            });
-        }
-    
+        
         window.addEventListener("DOMContentLoaded", () => {
  
             const urlLoaded = new Promise( (resolve,rejet) => {
@@ -103,14 +69,15 @@
                 const modelLoaded = cocoSsd.load();
             
                 Promise.all([imgLoaded, modelLoaded]).then(([event,model]) => {
-                    const c = document.getElementById('canvas');
-                    c.width = video.videoWidth;
-                    c.height = video.videoHeight;
+                    const canvas = document.getElementById('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+
                     const content = document.getElementById('content');
                     content.style.width = video.videoWidth;
                     content.style.height = video.videoHeight;
         
-                    runDetect(model, video)
+                    runDetect(model, video, canvas)
                 });
 
             });     
@@ -126,8 +93,6 @@
         </video>
         <canvas id="canvas" >
         </canvas>
-        <div id="detections">
-        </div>
     </div>
 </body>
 </html>
