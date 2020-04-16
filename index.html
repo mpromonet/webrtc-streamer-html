@@ -95,6 +95,9 @@
 			urllist.appendChild(option);
 		}
 		
+                if (argurl.video || argurl.audio) {
+			add(argurl);
+                } else {
 		var nbVideos = 1;
 		if (layout) {
 			var splitLayout = layout.split("x");
@@ -106,6 +109,7 @@
 		random.forEach((stream) => {
 			add(stream);
 		});
+                }
 	}
 	
 	// ------------------------------------------
