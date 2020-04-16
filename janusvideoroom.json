@@ -1,5 +1,4 @@
 var janusRoomConfig = {
 	url: "https://janus.conf.meetecho.com/janus",
-	roomId: 1234,
-	options: "width=128&height=96&maxFrameRate=1"
+	roomId: 1234
 }

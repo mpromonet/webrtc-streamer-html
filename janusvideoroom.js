@@ -175,6 +175,9 @@ JanusVideoRoom.prototype.onJoinRoomResult = function(dataJson,janusroomid,url,na
 			if (url.audio) {
 				createOfferUrl += "&audiourl="+encodeURIComponent(url.audio);
 			}
+			if (url.options) {
+				createOfferUrl += "&options="+encodeURIComponent(url.options);
+			}			
 			var bind = this;
 			request("GET" , createOfferUrl)
 				.done( function (response) { 
