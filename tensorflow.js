@@ -61,3 +61,31 @@ function runPosenet(model, video, canvas) {
         window.setTimeout( ()=>{ runPosenet(model, video, canvas); } , 0 );
     });
 }
+
+function runDeeplab(model, video, canvas) {
+
+    console.time('predict');
+    model.segment(video).then(deeplabOutput  => {
+        console.timeEnd('predict');
+        console.log('deeplabOutput: ', deeplabOutput );
+        const {legend, height, width, segmentationMap} = deeplabOutput;
+
+        const ctx = canvas.getContext('2d');
+        ctx.font = '16px Arial';
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const segmentationMapData = new ImageData(segmentationMap, width, height)
+        ctx.putImageData(segmentationMapData, 0, 0);
+
+        let cnt=0
+        Object.keys(legend).forEach((label) => {
+            const [red, green, blue] = legend[label];
+        
+            ctx.fillStyle = `rgb(${red}, ${green}, ${blue})`;
+            ctx.fillText(label, 0, cnt*16);
+            cnt++
+          });      
+
+        window.setTimeout( ()=>{ runDeeplab(model, video, canvas); } , 0 );
+    });
+}
