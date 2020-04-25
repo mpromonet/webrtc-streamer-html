@@ -30,14 +30,9 @@ function runDetect(model, video, canvas) {
 function runPosenet(model, video, canvas) {
 
     console.time('predict');
-    model.estimatePoses(video, {
-        decodingMethod: 'multi-person',
-        maxDetections: 5,
-        scoreThreshold: 0.1,
-        nmsRadius: 30
-      } ).then(poses => {
+    model.estimatePoses(video).then(poses => {
         console.timeEnd('predict');
-      //  console.log('Predictions: ', poses);
+        console.log('Predictions: ', poses);
 
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -70,19 +65,32 @@ function runDeeplab(model, video, canvas) {
         console.log('deeplabOutput: ', deeplabOutput );
         const {legend, height, width, segmentationMap} = deeplabOutput;
 
+	const scalecanvas = document.createElement('canvas')
+	scalecanvas.width = width;
+	scalecanvas.height = height;
+        const segmentationMapData = new ImageData(segmentationMap, width, height)
+	var imageData = segmentationMapData.data;
+	for(var i=0; i < imageData.length; i+=4){  
+		if ( (imageData[i] ==0) && (imageData[i+1] ==0) && (imageData[i+2] ==0) && (imageData[i+3] ==255)) {
+			 imageData[i+3] = 0;
+		} else {
+			imageData[i+3] = 200;
+		}
+	}
+        scalecanvas.getContext('2d').putImageData(segmentationMapData, 0, 0);
+	
         const ctx = canvas.getContext('2d');
         ctx.font = '16px Arial';
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        const segmentationMapData = new ImageData(segmentationMap, width, height)
-        ctx.putImageData(segmentationMapData, 0, 0);
+        ctx.drawImage(scalecanvas, 0, 0, width, height, 0, 0, canvas.width, canvas.height);
 
         let cnt=0
         Object.keys(legend).forEach((label) => {
             const [red, green, blue] = legend[label];
         
             ctx.fillStyle = `rgb(${red}, ${green}, ${blue})`;
-            ctx.fillText(label, 0, cnt*16);
+	    ctx.fillRect(0,cnt*16+16, 32, 16);
+            ctx.fillText(label, 40, cnt*16+32);
             cnt++
           });      
 
