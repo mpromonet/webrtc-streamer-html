@@ -1,4 +1,6 @@
-function runDetect(model, video, canvas) {
+console.log("tensorflow.js")
+
+window.runDetect = (model, video, canvas) => {
 
     console.time('predict');
     // detect objects in the image.
@@ -23,11 +25,11 @@ function runDetect(model, video, canvas) {
             predictions[i].bbox[1] > 10 ? predictions[i].bbox[1] - 5 : 10);
         }
 
-        window.setTimeout( ()=>{ runDetect(model, video, canvas); } , 0 );
+        window.setTimeout( ()=>{ window.runDetect(model, video, canvas); } , 0 );
     });
 }
 
-function runPosenet(model, video, canvas) {
+window.runPosenet = (model, video, canvas) => {
 
     console.time('predict');
     model.estimatePoses(video).then(poses => {
@@ -53,11 +55,11 @@ function runPosenet(model, video, canvas) {
                 }
         });
 
-        window.setTimeout( ()=>{ runPosenet(model, video, canvas); } , 0 );
+        window.setTimeout( ()=>{ window.runPosenet(model, video, canvas); } , 0 );
     });
 }
 
-function runDeeplab(model, video, canvas) {
+window.runDeeplab = (model, video, canvas) => {
 
     console.time('predict');
     model.segment(video).then(deeplabOutput  => {
@@ -94,6 +96,6 @@ function runDeeplab(model, video, canvas) {
             cnt++
           });      
 
-        window.setTimeout( ()=>{ runDeeplab(model, video, canvas); } , 0 );
+        window.setTimeout( ()=>{ window.runDeeplab(model, video, canvas); } , 0 );
     });
 }

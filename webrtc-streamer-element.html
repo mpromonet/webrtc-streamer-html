@@ -1,13 +1,19 @@
 <html>
 <head>
     <link rel="icon" type="image/png" href="webrtc.png" />
+    <script src="libs/tfjs"> </script>
+    <script src="libs/coco-ssd"> </script>
+    <script src="libs/posenet"> </script>
+    <script src="libs/deeplab"> </script>        
     <script type="module" src="webrtc-streamer-element.js"></script>
     <script type="module" src="webrtc-streamer-footer-element.js"></script>
     <script type="module" src="webrtc-streamer-menu-element.js"></script>
     <script type="module" src="webrtc-streamer-options-element.js"></script>
+    <script type="module" src="webrtc-streamer-algo-element.js"></script>
 </head>
 <body>
     <webrtc-streamer-menu id="selector" ></webrtc-streamer-menu>
+    <webrtc-streamer-algo id="algo"></webrtc-streamer-algo>
     <webrtc-streamer id="stream"></webrtc-streamer>
     <webrtc-streamer-options id="options" options="rtptransport=tcp&timeout=60&width=0&height=0&bitrate=0&rotation=0" style="display:none"></webrtc-streamer-options>
     <webrtc-streamer-footer></webrtc-streamer-footer>
@@ -17,25 +23,34 @@
             let selectorElement = document.getElementById("selector");
             let streamElement = document.getElementById("stream");
             let optionsElement = document.getElementById("options");
+            let algoElement = document.getElementById("algo");
+
             selectorElement.addEventListener('change', (event) => {
                 streamElement.setAttribute('url', '');
                 streamElement.setAttribute('options', optionsElement.getAttribute('options'));
                 streamElement.setAttribute('url', event.detail.url);
             });
+
             selectorElement.addEventListener('settings', (event) => {
                 optionsElement.style.display = event.detail === "on" ? "block" : "none";
             });
+  
             selectorElement.addEventListener('init', (event) => {
                 let mediaList = event.detail;
-		if (mediaList.length > 0) {
-			let media = JSON.stringify(mediaList[0])
-			selectorElement.setAttribute('selected', media);
-                	streamElement.setAttribute('url', '');
-	                streamElement.setAttribute('options', optionsElement.getAttribute('options'));
-       		        streamElement.setAttribute('url', media);
-		}
+                if (mediaList.length > 0) {
+                    let media = JSON.stringify(mediaList[0])
+                    selectorElement.setAttribute('selected', media);
+                    streamElement.setAttribute('url', '');
+                    streamElement.setAttribute('options', optionsElement.getAttribute('options'));
+                    streamElement.setAttribute('url', media);
+                }
             });
-            document.getElementById("options").addEventListener('change', (event) => {
+
+            algoElement.addEventListener('change', (event) => {
+                streamElement.setAttribute('algo', event.detail.algo);
+            });
+
+            optionsElement.addEventListener('change', (event) => {
                 streamElement.setAttribute('options', event.detail.options);
             });
             

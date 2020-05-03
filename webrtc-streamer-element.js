@@ -1,10 +1,11 @@
 import "./libs/request.min.js";
 import "./libs/adapter.min.js";
 import "./webrtcstreamer.js";
+import "./tensorflow.js";
 
 class WebRTCStreamerElement extends HTMLElement {
 	static get observedAttributes() {
-		return ['url', 'options', 'webrtcurl', 'notitle', 'width', 'height'];
+		return ['url', 'options', 'webrtcurl', 'notitle', 'width', 'height', 'algo'];
 	}  
 	
 	constructor() {
@@ -13,11 +14,16 @@ class WebRTCStreamerElement extends HTMLElement {
 		this.shadowDOM.innerHTML = `
 					<style>@import "styles.css"</style>
 					<h2 id="title"></h2>
-					<video id="video" muted></video>
+					<div id="content">
+						<video id="video" muted></video>
+						<canvas id="canvas"></canvas>
+					</div>
 					`;
 		this.initialized = false;
 		this.titleElement = this.shadowDOM.getElementById("title");
 		this.videoElement = this.shadowDOM.getElementById("video");
+		this.canvasElement = this.shadowDOM.getElementById("canvas");
+		this.contentElement = this.shadowDOM.getElementById("content");	
 	}
 	connectedCallback() {
 		this.connectStream();
@@ -45,6 +51,7 @@ class WebRTCStreamerElement extends HTMLElement {
 			this.webRtcServer = null;
 		}
 	}
+
 	connectStream() {
 		this.disconnectStream();
 		
@@ -73,8 +80,48 @@ class WebRTCStreamerElement extends HTMLElement {
 
 			this.webRtcServer = new WebRtcStreamer(this.videoElement, webrtcurl);
 			this.webRtcServer.connect(videostream, audiostream, options);
+
+			const imgLoaded = new Promise( (resolve,rejet) => {
+				this.videoElement.addEventListener('loadeddata', (event) => { 
+					resolve(event)
+				});
+			} );
+
+			let modelLoaded;
+			const algo = this.getAttribute("algo");
+			if (algo === "posenet") {
+				modelLoaded = posenet.load();
+				modelLoaded.run = runPosenet;
+			} else if (algo === "deeplab") {
+				modelLoaded = deeplab.load()
+				modelLoaded.run = runDeeplab;
+			} else if (algo === "cocossd") {
+				modelLoaded = cocoSsd.load();
+				modelLoaded.run = runDetect;
+			} else {
+				modelLoaded = new Promise( (resolve) => resolve() );
+			}
+		
+			Promise.all([imgLoaded, modelLoaded]).then(([event,model]) => {	
+				this.setVideoSize(this.videoElement.videoWidth, this.videoElement.videoHeight)
+
+				if (model) {
+					modelLoaded.run(model, this.videoElement, this.canvasElement)
+				}
+			});			
 		}
 	}	
+
+	setVideoSize(width, height) {
+		this.contentElement.style.width = width;
+		this.contentElement.style.height = height;				
+
+		this.videoElement.width = width;
+		this.videoElement.height = height;
+
+		this.canvasElement.width = width;
+		this.canvasElement.height = height;
+	}
 }
 
 customElements.define('webrtc-streamer', WebRTCStreamerElement);
