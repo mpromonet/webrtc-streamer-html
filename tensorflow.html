@@ -9,28 +9,7 @@
     <script src="libs/adapter.min.js" ></script>
     <script src="webrtcstreamer.js" ></script>
     <script src="tensorflow.js" ></script>
-    <style>
-        h2 {
-            margin: auto;
-            left: 0;
-            right: 0;   
-            text-align: center;
-        }
-        video {
-            margin: auto;
-            left: 0;
-            right: 0;            
-            position: absolute;
-            z-index: -1;
-        }
-        canvas {
-            position: absolute;
-            margin: auto;
-            left: 0;
-            right: 0;   
-            z-index:1;
-        }
-    </style>
+    <style>@import "styles.css"</style>
     <script>
         var url;  
         var options = "rtptransport=tcp&timeout=60";
@@ -91,10 +70,6 @@
                     const canvas = document.getElementById('canvas');
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
-
-                    const content = document.getElementById('content');
-                    content.style.width = video.videoWidth;
-                    content.style.height = video.videoHeight;
         
                     modelLoaded.run(model, video, canvas)
                 });
@@ -106,8 +81,8 @@
     
 </head>
 <body> 
+    <h2 id="title"></h2>
     <div id="content">
-        <h2 id="title"></h2>
         <video id="video" muted controls >
         </video>
         <canvas id="canvas" >

@@ -23,7 +23,6 @@ class WebRTCStreamerElement extends HTMLElement {
 		this.titleElement = this.shadowDOM.getElementById("title");
 		this.videoElement = this.shadowDOM.getElementById("video");
 		this.canvasElement = this.shadowDOM.getElementById("canvas");
-		this.contentElement = this.shadowDOM.getElementById("content");	
 	}
 	connectedCallback() {
 		this.connectStream();
@@ -113,9 +112,6 @@ class WebRTCStreamerElement extends HTMLElement {
 	}	
 
 	setVideoSize(width, height) {
-		this.contentElement.style.width = width;
-		this.contentElement.style.height = height;				
-
 		this.videoElement.width = width;
 		this.videoElement.height = height;
 

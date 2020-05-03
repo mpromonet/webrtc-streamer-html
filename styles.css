@@ -21,7 +21,7 @@ video {
     margin: auto;
     left: 0;
     right: 0;            
-    position: absolute;
+    position: relative;
     z-index: -1;
     background: grey;
 }
