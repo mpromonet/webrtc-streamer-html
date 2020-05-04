@@ -16,7 +16,7 @@ window.runDetect = (model, video, canvas) => {
         for (let i = 0; i < predictions.length; i++) {
             context.beginPath();
             context.rect(...predictions[i].bbox);
-            context.lineWidth = 1;
+            context.lineWidth = 2;
             context.strokeStyle = 'green';
             context.fillStyle = 'green';
             context.stroke();
@@ -32,7 +32,7 @@ window.runDetect = (model, video, canvas) => {
 window.runPosenet = (model, video, canvas) => {
 
     console.time('predict');
-    model.estimatePoses(video).then(poses => {
+    model.estimatePoses(video, {decodingMethod: 'multi-person', maxDetections: 5}).then(poses => {
         console.timeEnd('predict');
         console.log('Predictions: ', poses);
 
@@ -44,7 +44,7 @@ window.runPosenet = (model, video, canvas) => {
                 console.log('keypoints: ', keypoints);
                 for (let i = 0; i < keypoints.length; i++) {
                     const keypoint = keypoints[i];
-                    if (keypoint.score >= 0.1) {
+                    if (keypoint.score >= 0.5) {
                         const {y, x} = keypoint.position;
                         console.log(keypoint.part, ' : ', x, "x", y);
                         ctx.beginPath();
@@ -53,6 +53,13 @@ window.runPosenet = (model, video, canvas) => {
                         ctx.fill();
                     }
                 }
+                const adjacentKeyPoints = posenet.getAdjacentKeyPoints(keypoints, 0.5);
+                console.log('adjacentKeyPoints: ', adjacentKeyPoints);
+          
+                /*adjacentKeyPoints.forEach((keypoints) => {
+                    drawSegment(toTuple(keypoints[0].position), toTuple(keypoints[1].position), color,scale, ctx);
+                });*/
+
         });
 
         window.setTimeout( ()=>{ window.runPosenet(model, video, canvas); } , 0 );

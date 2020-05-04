@@ -4,7 +4,7 @@
     <script src="libs/tfjs"> </script>
     <script src="libs/coco-ssd"> </script>
     <script src="libs/posenet"> </script>
-    <script src="libs/deeplab"> </script>        
+    <script src="libs/deeplab"> </script>
     <script type="module" src="webrtc-streamer-element.js"></script>
     <script type="module" src="webrtc-streamer-footer-element.js"></script>
     <script type="module" src="webrtc-streamer-menu-element.js"></script>
@@ -25,6 +25,39 @@
             let optionsElement = document.getElementById("options");
             let algoElement = document.getElementById("algo");
 
+            let url;
+            if (typeof URLSearchParams != 'undefined') {
+                var params = new URLSearchParams(location.search);
+                if (params.has("options")) {
+                    streamElement.setAttribute('options', params.get("options"));
+                }
+                if (params.has("algo")) {
+                    algoElement.setAttribute('selected', params.get("algo"));
+                    streamElement.setAttribute('algo', params.get("algo"));
+                }            
+                if (params.has("video") || params.has("audio")) {
+                    url = { video:params.get("video"), audio:params.get("audio") };
+                }
+            }
+
+            selectorElement.addEventListener('init', (event) => {
+                    if (url) {
+                        let media = JSON.stringify(url)
+                        selectorElement.setAttribute('selected', media);
+                        streamElement.setAttribute('url', media);
+                    } else {
+                        let mediaList = event.detail;
+                        if (mediaList.length > 0) {
+                            let media = JSON.stringify(mediaList[0])
+                            selectorElement.setAttribute('selected', media);
+                            streamElement.setAttribute('url', '');
+                            streamElement.setAttribute('options', optionsElement.getAttribute('options'));
+                            streamElement.setAttribute('url', media);
+                        }
+                    }
+                });            
+            
+
             selectorElement.addEventListener('change', (event) => {
                 streamElement.setAttribute('url', '');
                 streamElement.setAttribute('options', optionsElement.getAttribute('options'));
@@ -33,17 +66,6 @@
 
             selectorElement.addEventListener('settings', (event) => {
                 optionsElement.style.display = event.detail === "on" ? "block" : "none";
-            });
-  
-            selectorElement.addEventListener('init', (event) => {
-                let mediaList = event.detail;
-                if (mediaList.length > 0) {
-                    let media = JSON.stringify(mediaList[0])
-                    selectorElement.setAttribute('selected', media);
-                    streamElement.setAttribute('url', '');
-                    streamElement.setAttribute('options', optionsElement.getAttribute('options'));
-                    streamElement.setAttribute('url', media);
-                }
             });
 
             algoElement.addEventListener('change', (event) => {

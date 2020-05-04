@@ -28,7 +28,7 @@ class WebRTCStreamerAlgoElement extends HTMLElement {
 			this.selected = newVal;
 			let mediaList = this.shadowDOM.getElementById("algoList");
 			for (const option of mediaList.getElementsByTagName('option')) {
-				if (option === newVal) {
+				if (option.value === newVal) {
 					option.selected = true;
 				}
 			}
