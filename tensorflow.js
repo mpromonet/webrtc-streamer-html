@@ -26,7 +26,7 @@ window.runDetect = (model, video, canvas) => {
         }
 
         if (model.run) {
-            window.setTimeout(() => { model.run(model, video, canvas); }, 0);
+            window.setTimeout(() => { model.run(model, video, canvas); }, 120);
         }
     });
 }
@@ -72,7 +72,7 @@ window.runPosenet = (model, video, canvas) => {
         });
 
         if (model.run) {
-            window.setTimeout(() => { model.run(model, video, canvas); }, 0);
+            window.setTimeout(() => { model.run(model, video, canvas); }, 120);
         }
     });
 }
@@ -115,7 +115,29 @@ window.runDeeplab = (model, video, canvas) => {
         });
 
         if (model.run) {
-            window.setTimeout(() => { model.run(model, video, canvas); }, 0);
+            window.setTimeout(() => { model.run(model, video, canvas); }, 120);
+        }
+    });
+}
+
+
+window.runbodyPix = (model, video, canvas) => {
+
+    console.time('runbodyPix');
+    model.segmentMultiPersonParts(video).then(multiPersonPartSegmentation => {
+        console.timeEnd('runbodyPix');
+
+        console.log('multiPersonPartSegmentation: ', multiPersonPartSegmentation);
+        const coloredPartImageData = bodyPix.toColoredPartMask(multiPersonPartSegmentation);
+
+        const ctx = canvas.getContext('2d');
+        if (coloredPartImageData) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            bodyPix.drawMask(canvas, video, coloredPartImageData, 0.3);        
+        }
+
+        if (model.run) {
+            window.setTimeout(() => { model.run(model, video, canvas); }, 120);
         }
     });
 }

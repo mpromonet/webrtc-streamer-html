@@ -14,7 +14,8 @@ class WebRTCStreamerAlgoElement extends HTMLElement {
                             <option value="none">none</option>
                             <option value="cocossd">cocossd</option>
                             <option value="posenet">posenet</option>
-                            <option value="deeplab">deeplab</option>
+							<option value="deeplab">deeplab</option>
+							<option value="bodyPix">bodyPix</option>
                         </select>
                     </h2>
 					`;

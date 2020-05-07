@@ -134,6 +134,9 @@ class WebRTCStreamerElement extends HTMLElement {
 			} else if (algo === "cocossd") {
 				modelLoaded = cocoSsd.load();
 				modelLoaded.run = runDetect;
+			} else if (algo === "bodyPix") {
+				modelLoaded = bodyPix.load();
+				modelLoaded.run = runbodyPix;
 			} else {
 				modelLoaded = new Promise( (resolve) => resolve() );
 			}
