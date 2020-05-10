@@ -26,7 +26,7 @@ class WebRTCStreamerElement extends HTMLElement {
 		this.modelLoaded = [];
 	}
 	connectedCallback() {
-		this.connectStream();
+		this.connectStream(true);
 		this.initialized = true;
 	}
 	disconnectedCallback() {
