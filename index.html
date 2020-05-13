@@ -162,7 +162,8 @@
 				videoelt.id = videoTag;
 				videoelt.title = getText(url);
 				videoelt.muted = true;
-				contentDiv.onclick = function() { 
+				videoelt.playsinline = true;
+				divelt.onclick = function() { 
 					let webstreamurl = webrtcConfig.url + "/webrtcstreamer.html?";
 					if (url.video) {
 						webstreamurl += "video=" + encodeURIComponent(url.video) + "&";

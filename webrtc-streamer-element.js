@@ -15,7 +15,7 @@ class WebRTCStreamerElement extends HTMLElement {
 					<style>@import "styles.css"</style>
 					<h2 id="title"></h2>
 					<div id="content">
-						<video id="video" muted></video>
+						<video id="video" muted playsinline></video>
 						<canvas id="canvas"></canvas>
 					</div>
 					`;
