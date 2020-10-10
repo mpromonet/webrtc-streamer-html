@@ -20,8 +20,10 @@ class WebRTCStreamerMenuElement extends HTMLElement {
 		if (attrName === "selected") {
 			this.selected = newVal;
 			let mediaList = this.shadowDOM.getElementById("mediaList");
+			let newValjson = JSON.parse(newVal);
 			for (const option of mediaList.getElementsByTagName('a')) {
-				if (option.value === newVal) {
+				let optionjson = JSON.parse(option.value);
+				if (optionjson.video === newValjson.video) {
 					option.selected = true;
 					option.className = "active";
 				}

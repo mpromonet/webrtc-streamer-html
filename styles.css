@@ -1,9 +1,4 @@
 @import url('/nav.css');
-video {
-    display: block; 
-    margin: 0 auto;
-    background: grey;
-}
 table {
     margin: 0 auto;
 }
@@ -21,4 +16,19 @@ div {
 button {
     margin: 0 auto;
     display: block;
+}
+video {
+    margin: auto;
+    left: 0;
+    right: 0;            
+    position: relative;
+    z-index: -1;
+    background: grey;
+}
+canvas {
+    position: absolute;
+    margin: auto;
+    left: 0;
+    right: 0;   
+    z-index:1;
 }
