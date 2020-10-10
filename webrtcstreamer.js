@@ -23,6 +23,13 @@ var WebRtcStreamer = function WebRtcStreamer (videoElement, srvurl) {
 	this.earlyCandidates = [];
 }
 
+WebRtcStreamer.prototype._handleHttpErrors = function (response) {
+    if (!response.ok) {
+        throw Error(response.statusText);
+    }
+    return response;
+}
+
 /** 
  * Connect a WebRTC Stream to videoElement 
  * @param {string} videourl - id of WebRTC video stream
@@ -37,17 +44,12 @@ WebRtcStreamer.prototype.connect = function(videourl, audiourl, options, localst
 	if (!this.iceServers) {
 		console.log("Get IceServers");
 		
-		var bind = this;
-		request("GET" , this.srvurl + "/api/getIceServers")
-			.done( function (response) { 
-				if (response.statusCode === 200) {
-					bind.onReceiveGetIceServers.call(bind,JSON.parse(response.body), videourl, audiourl, options, localstream);
-				}
-				else {
-					bind.onError("getIceServers "+response.statusCode);
-				}
-			}
-		);		
+		fetch(this.srvurl + "/api/getIceServers")
+			.then(this._handleHttpErrors)
+			.then( (response) => (response.json()) )
+			.then( (response) =>  this.onReceiveGetIceServers.call(this,response, videourl, audiourl, options, localstream))
+			.catch( (error) => this.onError("getIceServers " + error ))
+				
 	} else {
 		this.onReceiveGetIceServers(this.iceServers, videourl, audiourl, options, localstream);
 	}
@@ -61,7 +63,10 @@ WebRtcStreamer.prototype.disconnect = function() {
 		this.videoElement.src = "";
 	}
 	if (this.pc) {
-		request("GET" , this.srvurl + "/api/hangup?peerid="+this.pc.peerid);
+		fetch(this.srvurl + "/api/hangup?peerid="+this.pc.peerid)
+			.then(this._handleHttpErrors)
+			.catch( (error) => this.onError("hangup " + error ))
+
 		
 		try {
 			this.pc.close();
@@ -104,16 +109,13 @@ WebRtcStreamer.prototype.onReceiveGetIceServers = function(iceServers, videourl,
 			
 			bind.pc.setLocalDescription(sessionDescription
 				, function() {
-					request("POST" , callurl, { body: JSON.stringify(sessionDescription) })
-						.done( function (response) { 
-							if (response.statusCode === 200) {
-								bind.onReceiveCall.call(bind,JSON.parse(response.body));
-							}
-							else {
-								bind.onError("call " + response.statusCode);
-							}
-						}
-					);					
+					fetch(callurl, { method: "POST", body: JSON.stringify(sessionDescription) })
+						.then(bind._handleHttpErrors)
+						.then( (response) => (response.json()) )
+						.catch( (error) => bind.onError("call " + error ))
+						.then( (response) =>  bind.onReceiveCall.call(bind,response) )
+						.catch( (error) => bind.onError("call " + error ))
+				
 				}
 				, function(error) {
 					console.log ("setLocalDescription error:" + JSON.stringify(error)); 
@@ -131,17 +133,11 @@ WebRtcStreamer.prototype.onReceiveGetIceServers = function(iceServers, videourl,
 
 
 WebRtcStreamer.prototype.getIceCandidate = function() {
-	var bind = this;
-	request("GET" , this.srvurl + "/api/getIceCandidate?peerid=" + this.pc.peerid)
-		.done( function (response) { 
-			if (response.statusCode === 200) {
-				bind.onReceiveCandidate.call(bind,JSON.parse(response.body));
-			}
-			else {
-				bind.onError("getIceCandidate" + response.statusCode);
-			}
-		}
-	);
+	fetch(this.srvurl + "/api/getIceCandidate?peerid=" + this.pc.peerid)
+		.then(this._handleHttpErrors)
+		.then( (response) => (response.json()) )
+		.then( (response) =>  this.onReceiveCandidate.call(this, response))
+		.catch( (error) => bind.onError("getIceCandidate " + error ))
 }
 					
 /*
@@ -220,17 +216,11 @@ WebRtcStreamer.prototype.onIceCandidate = function (event) {
 
 
 WebRtcStreamer.prototype.addIceCandidate = function(peerid, candidate) {
-	var bind = this;
-	request("POST" , this.srvurl + "/api/addIceCandidate?peerid="+peerid, { body: JSON.stringify(candidate) })
-		.done( function (response) { 
-			if (response.statusCode === 200) {
-				console.log("addIceCandidate ok:" + response.body);
-			}
-			else {
-				bind.onError("addIceCandidate " +response.statusCode);
-			}
-		}
-	);
+	fetch(this.srvurl + "/api/addIceCandidate?peerid="+peerid, { method: "POST", body: JSON.stringify(candidate) })
+		.then(this._handleHttpErrors)
+		.then( (response) => (response.json()) )
+		.then( (response) =>  {console.log("addIceCandidate ok:" + response)})
+		.catch( (error) => this.onError("addIceCandidate " + error ))
 }
 				
 /*

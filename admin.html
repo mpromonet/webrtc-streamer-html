@@ -1,6 +1,5 @@
 <html>
 <head>
-<script src="libs/request.min.js" ></script>
 <script src="libs/ag-grid.min.js"></script>
 <script src="webrtcstreamer.json" ></script>
 <script src="webrtcstreamer.js" ></script>
@@ -33,7 +32,7 @@ footer {
 		eButton.innerHTML = params.value;
 		eDiv.appendChild(eButton);
 		eButton.addEventListener('click', function() {
-			request( 'GET',  webrtcConfig.url + "/api/hangup?peerid=" + params.data.peerid )
+			fetch( webrtcConfig.url + "/api/hangup?peerid=" + params.data.peerid )
 		});
 
 		return eDiv;
@@ -93,20 +92,18 @@ footer {
 	}
 	
 	function getPeerConnectionList() {
-		request( 'GET',  webrtcConfig.url + "/api/getPeerConnectionList" ).done(
-			function (response) {
-				if (response.statusCode === 200) { onGetPeerConnectionList(JSON.parse(response.body)) }
-			});
+		fetch(webrtcConfig.url + "/api/getPeerConnectionList")
+			.then( (response) => response.json() ) 
+			.then( (response) => onGetPeerConnectionList( response ))
 	}
 
 	// load
 	window.onload         = function() { 
 		getPeerConnectionList();
 		window.setInterval(()=> { getPeerConnectionList(); }, 2000);
-		request( 'GET',  webrtcConfig.url + "/api/version" ).done(
-			function (response) {
-				if (response.statusCode === 200) { onVersion(JSON.parse(response.body)) }
-			});
+		fetch(webrtcConfig.url + "/api/version")
+			.then( (response) => response.json() ) 
+			.then( (response) => onVersion( response ))
 	} 
 	
 	// unload

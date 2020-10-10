@@ -3,7 +3,6 @@
 <title>WebRTC Streamer</title>
 <link rel="icon" type="image/png" href="webrtc.png" />
 <link rel="stylesheet" type="text/css" href="styles.css">
-<script src="libs/request.min.js" ></script>
 <script src="libs/adapter.min.js" ></script>
 <script src="webrtcstreamer.json" ></script>
 <script src="webrtcstreamer.js" ></script>
@@ -220,12 +219,14 @@
 			document.getElementById("content").appendChild(tableelt);
 		}
 		
-		request("GET" , webrtcConfig.url + "/api/getMediaList").done( function (response) { 
-			onGetDeviceList( JSON.parse(response.body));
-		});
-		request("GET" , webrtcConfig.url + "/api/version").done( function (response) { 
-			onVersion( JSON.parse(response.body));
-		});
+		fetch(webrtcConfig.url + "/api/getMediaList")
+			.then( (response) => response.json() ) 
+			.then( (response) => onGetDeviceList( response ))
+		
+		fetch(webrtcConfig.url + "/api/version")
+			.then( (response) => response.json() ) 
+			.then( (response) => onVersion( response ))
+
 	} 
 	window.onbeforeunload = function() { 
 		for (var url in webRtcServerList) { 
