@@ -179,6 +179,17 @@ WebRtcStreamer.prototype.createPeerConnection = function() {
 			console.log("remote datachannel recv:"+JSON.stringify(event.data));
 		}
 	}
+	pc.onicegatheringstatechange = function() {
+		if (pc.iceGatheringState === "complete") {
+			const recvs = pc.getReceivers();
+		
+			recvs.forEach((recv) => {
+			  if (recv.track && recv.track.kind === "video") {
+				console.log("codecs:" + JSON.stringify(recv.getParameters().codecs))
+			  }
+			});
+		  }
+	}
 
 	try {
 		var dataChannel = pc.createDataChannel("ClientDataChannel");
@@ -203,7 +214,7 @@ WebRtcStreamer.prototype.createPeerConnection = function() {
 */
 WebRtcStreamer.prototype.onIceCandidate = function (event) {
 	if (event.candidate) {
-                if (this.pc.currentRemoteDescription)  {
+		if (this.pc.currentRemoteDescription)  {
 			this.addIceCandidate(this.pc.peerid, event.candidate);					
 		} else {
 			this.earlyCandidates.push(event.candidate);
