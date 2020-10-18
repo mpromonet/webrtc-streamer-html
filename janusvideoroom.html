@@ -133,14 +133,16 @@
 	
 	// load
 	window.onload         = function() { 
-		request( 'GET',  webrtcConfig.url + "/api/getMediaList" ).done(
-			function (response) {
-				if (response.statusCode === 200) { onGetDeviceList(JSON.parse(response.body)) }
-			});
-		request( 'GET',  webrtcConfig.url + "/api/version" ).done(
-			function (response) {
-				if (response.statusCode === 200) { onVersion(JSON.parse(response.body)) }
-			});
+		fetch(webrtcConfig.url + "/api/getMediaList")
+			.then( (response) => (response.json()) )
+			.then( (response) => onGetDeviceList(response) )
+			.catch( (error) => this.onError("getMediaList " + error ))
+
+		fetch(webrtcConfig.url + "/api/version")
+			.then( (response) => (response.json()) )
+			.then( (response) => onVersion(response) )
+			.catch( (error) => this.onError("version " + error ))			
+
 	} 
 	
 	// unload
