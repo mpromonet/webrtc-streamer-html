@@ -17,7 +17,6 @@
             </style>
             <script src="./webrtcstreamer.json"></script>
             <script type="module" src="./webrtc-streamer-element.js"></script>
-            <script src="./libs/request.min.js"></script>
             <script src="https://maps.googleapis.com/maps/api/js?v=3"></script>
             <script src="./htmlmapmarker.js"></script>
             <script type="module" src="webrtc-streamer-footer-element.js"></script>
@@ -28,9 +27,9 @@
        <webrtc-streamer-footer></webrtc-streamer-footer>
 
        <script>
-      request("GET" , webrtcConfig.url + "/api/getMediaList").done( (response) => { 
+      fetch(webrtcConfig.url + "/api/getMediaList").then( r => r.json() ).then((response) => { 
          let mediaList = {}
-         JSON.parse(response.body).forEach( (media) => {
+         response.forEach( (media) => {
            if (media.position) {
               const position = media.position.split(',');
               mediaList[media.video] = new google.maps.LatLng(position[0], position[1]);
