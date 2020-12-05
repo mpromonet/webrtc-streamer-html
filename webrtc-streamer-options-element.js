@@ -1,4 +1,3 @@
-import "./libs/request.min.js";
 
 class WebRTCStreamerOptionsElement extends HTMLElement {	
 	constructor() {

@@ -1,5 +1,3 @@
-import "./libs/request.min.js";
-
 class WebRTCStreamerSelectorElement extends HTMLElement {	
 	static get observedAttributes() {
 		return ['selected', 'webrtcurl'];
@@ -34,8 +32,8 @@ class WebRTCStreamerSelectorElement extends HTMLElement {
 	fillList() {
 		let mediaList = this.shadowDOM.getElementById("mediaList");
 		const webrtcurl = this.getAttribute("webrtcurl") || "";
-		request("GET" , webrtcurl + "/api/getMediaList").done( (response) => { 
-			JSON.parse(response.body).forEach( (media) => {
+		fetch(webrtcurl + "/api/getMediaList").then(r => r.json()).then( (response) => { 
+			response.forEach( (media) => {
 				var newOption = document.createElement("option");
 				newOption.text = media.video;
 				newOption.value = JSON.stringify(media);

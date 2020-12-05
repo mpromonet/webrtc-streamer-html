@@ -1,4 +1,4 @@
-import "./libs/request.min.js";
+
 
 class WebRTCStreamerFooterElement extends HTMLElement {	
 	constructor() {
@@ -27,8 +27,8 @@ class WebRTCStreamerFooterElement extends HTMLElement {
 	fillFooter() {
 		let footerElement = this.shadowDOM.getElementById("footer");
 		const webrtcurl = this.getAttribute("webrtcurl") || "";
-		request("GET" , webrtcurl + "/api/version").done( function (response) { 
-			footerElement.innerHTML = "<p><a href='https://github.com/mpromonet/webrtc-streamer'>WebRTC-Streamer</a> " + JSON.parse(response.body).split(" ")[0] + "</p>";			
+		fetch(webrtcurl + "/api/version").then(r => r.text()).then( function (response) { 
+			footerElement.innerHTML = "<p><a href='https://github.com/mpromonet/webrtc-streamer'>WebRTC-Streamer</a> " + JSON.parse(response).split(" ")[0] + "</p>";			
 		});	
 	
 	}

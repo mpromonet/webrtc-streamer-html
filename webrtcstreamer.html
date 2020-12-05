@@ -21,8 +21,8 @@
 			this.webRtcServer = new WebRtcStreamer("video", webrtcConfig.url);
 			document.getElementById("title").innerHTML=url.video; 
 			webRtcServer.connect(url.video,url.audio,options);
-			request("GET" , webrtcConfig.url + "/api/version").done( function (response) { 
-				document.getElementById("footer").innerHTML = "<p><a href='https://github.com/mpromonet/webrtc-streamer'>WebRTC-Streamer</a> " + JSON.parse(response.body).split(" ")[0] + "</p>";			
+			fetch(webrtcConfig.url + "/api/version").then(r => r.text()).then( (response) => { 
+				document.getElementById("footer").innerHTML = "<p><a href='https://github.com/mpromonet/webrtc-streamer'>WebRTC-Streamer</a> " + JSON.parse(response).split(" ")[0] + "</p>";			
 			});			
 		}
 		window.onbeforeunload = function() { this.webRtcServer.disconnect() }
