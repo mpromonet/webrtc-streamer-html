@@ -63,7 +63,7 @@ class WebRTCStreamerMenuElement extends HTMLElement {
 				mediaList.appendChild(option);
 			});
 			this.dispatchEvent(new CustomEvent('init', {
-				detail: JSON.parse(response.body)
+				detail: response
 			}));
 
 
