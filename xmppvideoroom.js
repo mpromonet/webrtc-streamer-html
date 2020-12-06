@@ -197,15 +197,10 @@ var XMPPVideoRoom = (function() {
 					var candidate = earlyCandidates.shift();
 					console.log("===> webrtc candidate :" + JSON.stringify(candidate));
 					var method = this.srvurl + "/api/addIceCandidate?peerid="+ sid;
-					request("POST" , method, { body: JSON.stringify(candidate) }).done( function (response) { 
-							if (response.statusCode === 200) {
-								console.log("method:"+method+ " answer:" +response.body);
-							}
-							else {
-								bind.onError(response.statusCode);
-							}
-						}
-					);	
+					fetch(method, { method: "POST", body: JSON.stringify(candidate) })
+					.then( (response) => (response.json()) )
+					.then( (response) => console.log("method:"+method+ " answer:" +response) )
+					.catch( (error) => this.onError("call " + error ))	
 			}
 		}
 		delete this.sessionList[sid].earlyCandidates;
@@ -216,17 +211,9 @@ var XMPPVideoRoom = (function() {
 						.attrs({ action: "session-accept",  sid, responder:iq.getAttribute("to") });
 
 		var answer = sdp.toJingle(jingle); 
-		var bind = this;
-		var method = this.srvurl + "/api/getIceCandidate?peerid="+ sid;
-		request("GET" , method).done( function (response) { 
-				if (response.statusCode === 200) {
-					bind.onReceiveCandidate(connection, roomid, name, answer.node, JSON.parse(response.body));
-				}
-				else {
-					bind.onError(response.statusCode);
-				}
-			}
-		);			
+		fetch(this.srvurl + "/api/getIceCandidate?peerid="+ sid).then(r => r.json()).then( (response) => { 
+					this.onReceiveCandidate(connection, roomid, name, answer.node, response);
+		}).catch( error =>  this.onError(error) )
 	}
 	
 	XMPPVideoRoom.prototype.emitState = function(name, state) {
@@ -281,16 +268,12 @@ var XMPPVideoRoom = (function() {
 				if (url.audio) {
 					method += "&audio="+encodeURIComponent(url.audio);
 				}
-				method += "&options="+encodeURIComponent("rtptransport=tcp&timeout=60");				
-				request("POST" , method, {body:JSON.stringify({type:"offer",sdp:sdp.raw})}).done( function (response) { 
-						if (response.statusCode === 200) {
-							bind.onCall(connection, roomid, name, iq, JSON.parse(response.body));
-						}
-						else {
-							bind.onError(response.statusCode);
-						}
-					}
-				);
+				method += "&options="+encodeURIComponent("rtptransport=tcp&timeout=60");	
+				fetch(method, { method: "POST", body: JSON.stringify({type:"offer",sdp:sdp.raw}) })
+					.then( (response) => (response.json()) )
+					.then( (response) => this.onCall(connection, roomid, name, iq, response ) )
+					.catch( (error) => this.onError("call " + error ))
+
 			}
 				
 		} else if (action === "transport-info") {
@@ -317,15 +300,11 @@ var XMPPVideoRoom = (function() {
 							} else {
 								console.log("===> webrtc candidate :" + JSON.stringify(candidate));
 								var method = this.srvurl + "/api/addIceCandidate?peerid="+ sid;
-								request("POST" , method, { body: JSON.stringify(candidate) }).done( function (response) { 
-										if (response.statusCode === 200) {
-											console.log("method:"+method+ " answer:" +response.body);
-										}
-										else {
-											bind.onError(response.statusCode);
-										}
-									}
-								);			
+
+								fetch(method, { method: "POST", body: JSON.stringify(candidate) })
+									.then( (response) => (response.json()) )
+									.then( (response) => console.log("method:"+method+ " answer:" +response) )
+									.catch( (error) => this.onError("call " + error ))		
 							}							
 						});
 					});
@@ -401,17 +380,12 @@ var XMPPVideoRoom = (function() {
 			this.connection.sendIQ(iq);
 
 			// close WebRTC session
-			var bind = this;
-			var method = this.srvurl + "/api/hangup?peerid="+ sid;
-			request("GET" , method).done( function (response) { 
-					if (response.statusCode === 200) {
-						console.log("method:"+method+ " answer:" +response.body);
-					}
-					else {
-						bind.onError(response.statusCode);
-					}
-				}
-			);					
+			fetch(this.srvurl + "/api/hangup?peerid="+ sid).then(r => r.json()).then( (response) => { 
+				console.log("method:"+method+ " answer:" +response);
+			}).catch(error => {
+				this.onError(error);
+			})
+				
 				
 			this.connection.muc.leave(roomUrl, session.name);
 			this.connection.flush();

@@ -5,7 +5,6 @@
 <script src="libs/strophe.disco.min.js" ></script>
 <script src="libs/strophe.jingle.sdp.js"></script>
 <script src="libs/jquery-1.12.4.min.js"></script>
-<script src="libs/request.min.js"></script>
 <script src="libs/EventEmitter.min.js" ></script>
 <script src="xmppvideoroom.js" ></script>
 <script src="xmppvideoroom.json" ></script>
@@ -65,8 +64,8 @@
 			urllist.appendChild(option);
 		}		
 	}		
-	request("GET" , webrtcConfig.url + "/api/getMediaList").done( function (response) { 
-		onGetDeviceList( JSON.parse(response.body));
+	fetch(webrtcConfig.url + "/api/getMediaList").then(r => r.json()).then( (response) => { 
+		onGetDeviceList(response);
 	});
 		
 	function onPresence (name, status) {
