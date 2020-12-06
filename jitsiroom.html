@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Jitsi Room</title>
 	<link rel="stylesheet" type="text/css" href="styles.css">
-    <script src="libs/jquery-1.12.4.min.js"></script>
+    <script src="libs/jquery-2.1.1.min.js"></script>
     <script src="libs/lib-jitsi-meet.min.js"></script>
 	<script src="xmppvideoroom.json" ></script>
 </head>
@@ -96,7 +96,7 @@
 	}
 
 	function join(serverUrl, roomName) {
-		JitsiMeetJS.setLogLevel(JitsiMeetJS.logLevels.ERROR);
+		JitsiMeetJS.setLogLevel(JitsiMeetJS.logLevels.TRACE);
 		JitsiMeetJS.init({});
 
 		const options = {
@@ -104,7 +104,7 @@
 				domain: serverUrl,
 				muc: 'conference.' + serverUrl 
 			},
-			bosh: 'https://' + serverUrl + '/http-bind',
+			bosh: 'https://' + serverUrl + '/http-bind?room='+roomName
 		};
 
 		var connection = new JitsiMeetJS.JitsiConnection(null, null, options);
