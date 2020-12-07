@@ -13,6 +13,7 @@
 	Room id:<input id="xmppRoom" type="text" />
 	<a href="#" onclick="load()">Load</a>
 	<a href="#" onclick="unload()">Unload</a>
+	<br/>
 </body>
 <script>
 	// set default value
@@ -96,7 +97,7 @@
 	}
 
 	function join(serverUrl, roomName) {
-		JitsiMeetJS.setLogLevel(JitsiMeetJS.logLevels.TRACE);
+		JitsiMeetJS.setLogLevel(JitsiMeetJS.logLevels.INFO);
 		JitsiMeetJS.init({});
 
 		const options = {
