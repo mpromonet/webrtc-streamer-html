@@ -120,7 +120,8 @@
 	xmpp.query(roomName);		
 	
 	window.onbeforeunload = function() { 
-		XMPPServerList.entries().forEach( ([serverName, xmpp]) => {
+		console.log(Object.entries(XMPPServerList))
+		Object.entries(XMPPServerList).forEach( ([serverName, xmpp]) => {
 			xmpp.leaveAll();
 		});
 	};		

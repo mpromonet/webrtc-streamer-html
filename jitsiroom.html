@@ -30,7 +30,7 @@
 			const idx = remoteTracks[participant].push(track);
 			const id = participant + track.getType() + idx;
 			if (track.getType() === 'video') {
-				$('body').append(`<video autoplay='1' id='${id}' title='${participant}' onclick='kick("${participant}")' />`);
+				$('body').append(`<div title='${participant}' onclick="kick('${participant}')"><video autoplay='1' id='${id}'" /></div>`);
 			} else {
 				$('body').append(`<audio autoplay='1' id='${id}' />`);
 			}
@@ -47,7 +47,7 @@
 				for (let i = 0; i < tracks.length; i++) {
 					const idx = i+1;
 					const id = participant + track.getType() + idx;
-					tracks[i].detach($(`#${id}`));
+					tracks[i].detach($(`#${id}`)[0]);
 					$(`#${id}`).remove();
 					tracks[i].dispose();
 				}
@@ -84,9 +84,11 @@
 
 	function disconnect() {
 		console.log('disconnect!');
-		connection.removeEventListener(JitsiMeetJS.events.connection.CONNECTION_ESTABLISHED, onConnectionSuccess);
-		connection.removeEventListener(JitsiMeetJS.events.connection.CONNECTION_FAILED, onConnectionFailed);
-		connection.removeEventListener(JitsiMeetJS.events.connection.CONNECTION_DISCONNECTED, disconnect);
+		if (connection) {
+			connection.removeEventListener(JitsiMeetJS.events.connection.CONNECTION_ESTABLISHED, onConnectionSuccess);
+			connection.removeEventListener(JitsiMeetJS.events.connection.CONNECTION_FAILED, onConnectionFailed);
+			connection.removeEventListener(JitsiMeetJS.events.connection.CONNECTION_DISCONNECTED, disconnect);
+		}
 	}
 
 	function kick(paticipant) {

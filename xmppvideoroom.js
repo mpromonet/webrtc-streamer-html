@@ -166,16 +166,16 @@ var XMPPVideoRoom = (function() {
 
 			var id = connection.sendIQ(iq, () => {
 				console.log("===> xmpp transport-info ok sid:" + sid);		
-			},() => {
-				console.log("############transport-info error sid:" + sid);
+			},(error) => {
+				console.log("############transport-info error sid:" + sid + " error:" + error);
 			});
 		});	
 
 		var id = connection.sendIQ(answer, () => {
 			console.log("===> xmpp session-accept ok sid:" + sid);
 			this.emitState(roomid + '/' + name, "published");			
-		},() => {
-			console.log("############session-accept error sid:" + sid);
+		},(error) => {
+			console.log("############session-accept error sid:" + sid + " error:" + error);
 		});
 	}
 
@@ -397,4 +397,9 @@ var XMPPVideoRoom = (function() {
 	return XMPPVideoRoom;
 })();
 
-module.exports = XMPPVideoRoom;
+
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined')
+	module.exports = XMPPVideoRoom;
+else
+	window.XMPPVideoRoom = XMPPVideoRoom;
+
