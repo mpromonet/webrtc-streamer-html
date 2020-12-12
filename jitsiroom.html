@@ -27,14 +27,13 @@
 		console.log(`onRemoteAddTrack track ${track}`);
 		if (!track.isLocal()) {
 			const participant = track.getParticipantId();		
-			const idx = remoteTracks[participant].push(track);
-			const id = participant + track.getType() + idx;
+			remoteTracks[participant].push(track);
 			if (track.getType() === 'video') {
-				$('body').append(`<div title='${participant}' onclick="kick('${participant}')"><video autoplay='1' id='${id}'" /></div>`);
+				$('body').append(`<div title='${participant}' onclick="kick('${participant}')"><video autoplay='1' id='${participant}'" /></div>`);
 			} else {
-				$('body').append(`<audio autoplay='1' id='${id}' />`);
+				$('body').append(`<audio autoplay='1' id='${participant}' />`);
 			}
-			track.attach($(`#${id}`)[0]);
+			track.attach($(`#${participant}`)[0]);
 		}
 	}
 
@@ -45,10 +44,8 @@
 			const tracks = remoteTracks[participant];
 			if (tracks) {
 				for (let i = 0; i < tracks.length; i++) {
-					const idx = i+1;
-					const id = participant + track.getType() + idx;
-					tracks[i].detach($(`#${id}`)[0]);
-					$(`#${id}`).remove();
+					tracks[i].detach($(`#${participant}`)[0]);
+					$(`#${participant}`).remove();
 					tracks[i].dispose();
 				}
 			}

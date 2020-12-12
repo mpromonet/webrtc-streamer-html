@@ -151,30 +151,28 @@
 		if (document.getElementById (videoTag) === null) {
 			var contentDiv = getContentDiv();
 			if (contentDiv) {
+				let webstreamurl = webrtcConfig.url + "/webrtcstreamer.html?";
+				if (url.video) {
+					webstreamurl += "video=" + encodeURIComponent(url.video) + "&";
+				}
+				if (url.audio) {
+					webstreamurl += "audio=" + encodeURIComponent(url.audio) + "&";
+				}
+				if (argoptions) {
+					webstreamurl += "options=" + encodeURIComponent(argoptions) + "&";
+				}				
 				var divelt = document.createElement("div");
 				divelt.id = "div_" + videoTag
 				var nameelt = document.createElement("h2");
 				nameelt.id = "title_" + videoTag
-				nameelt.innerHTML = getText(url);
+				nameelt.innerHTML = "<a href='" + webstreamurl +"' >"+getText(url)+"</a>";
 				divelt.appendChild(nameelt);
 				var videoelt = document.createElement("video");
 				videoelt.id = videoTag;
 				videoelt.title = getText(url);
 				videoelt.muted = true;
+				videoelt.controls = true;
 				videoelt.playsinline = true;
-				divelt.onclick = function() { 
-					let webstreamurl = webrtcConfig.url + "/webrtcstreamer.html?";
-					if (url.video) {
-						webstreamurl += "video=" + encodeURIComponent(url.video) + "&";
-					}
-					if (url.audio) {
-						webstreamurl += "audio=" + encodeURIComponent(url.audio) + "&";
-					}
-					if (argoptions) {
-						webstreamurl += "options=" + encodeURIComponent(argoptions) + "&";
-					}
-					window.open(webstreamurl); 
-				}
 				divelt.appendChild(videoelt);
 				contentDiv.appendChild(divelt);
 			}			
