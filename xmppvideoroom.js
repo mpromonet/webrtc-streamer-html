@@ -15,11 +15,11 @@ var XMPPVideoRoom = (function() {
 		this.connection = {};
 	};
 		
-	XMPPVideoRoom.prototype.getConnection = function(roomId) {
-		
+	XMPPVideoRoom.prototype.getConnection = function(roomId, username) {
+		var key = roomId + "/" + username
 		return new Promise( (resolve, reject) => {
-			if (this.connection.hasOwnProperty(roomId)) {
-				resolve(this.connection[roomId]);
+			if (this.connection.hasOwnProperty(key)) {
+				resolve(this.connection[key]);
 			} else {
 				var connection = new Strophe.Connection("https://" + this.xmppUrl + "/http-bind?room="+roomId);
 				connection.connect(this.xmppUrl, null, (status) => {
@@ -30,7 +30,7 @@ var XMPPVideoRoom = (function() {
 						reject('Strophe failed to connect.')
 					} else if (status === Strophe.Status.CONNECTED) {
 						console.log('Strophe is connected.');
-						this.connection[roomId] = connection;
+						this.connection[key] = connection;
 						resolve(connection);
 					}
 				});
@@ -42,11 +42,11 @@ var XMPPVideoRoom = (function() {
 	* Ask to publish a stream from WebRTC-streamer in a XMPP Video Room user
 	* @param {string} roomId - id of the XMPP Video Room to join
 	* @param {string} url - WebRTC stream to publish
-	* @param {string} name - name in Video Room
+	* @param {string} username - name in Video Room
 	*/
-	XMPPVideoRoom.prototype.join = function(roomId, url, name, password) {
+	XMPPVideoRoom.prototype.join = function(roomId, url, username, password) {
 
-		this.getConnection(roomId).then( connection => {
+		this.getConnection(roomId, username).then( connection => {
 			if (connection.disco) {
 				connection.disco.addIdentity('client', 'http://jitsi.org/jitsimeet');
 				connection.disco.addFeature("urn:xmpp:jingle:1");	
@@ -59,14 +59,14 @@ var XMPPVideoRoom = (function() {
 				connection.disco.addFeature("urn:ietf:rfc:5888"); // a=group, e.g. bundle
 				
 			}		
-			connection.addHandler(this.OnJingle.bind(this, connection, roomId, name, url), 'urn:xmpp:jingle:1', 'iq', 'set', null, null);
+			connection.addHandler(this.OnJingle.bind(this, connection, roomId, username, url), 'urn:xmpp:jingle:1', 'iq', 'set', null, null);
 	
-			var roomUrl = roomId + "@" + "conference." + this.xmppUrl;			
-			var extPresence = Strophe.xmlElement('nick', {xmlns:'http://jabber.org/protocol/nick'}, name);
-			connection.muc.join(roomUrl, name, null, this.OnPresence.bind(this,connection,roomId), null, password, null, extPresence);				
+			var roomUrl = this.getRoomUrl(roomId);			
+			var extPresence = Strophe.xmlElement('nick', {xmlns:'http://jabber.org/protocol/nick'}, username);
+			connection.muc.join(roomUrl, username, null, this.OnPresence.bind(this,connection,roomId), null, password, null, extPresence);				
 			
-			this.emitState(roomId + '/' + name, "joining");
-			this.emitState(roomId + '/' + name, "joined");
+			this.emitState(roomId + '/' + username, "joining");
+			this.emitState(roomId + '/' + username, "joined");
 		});
 	}
 
@@ -84,8 +84,8 @@ var XMPPVideoRoom = (function() {
 			}
 		});
 		if (!found) {
-			var roomUrl = roomId + "@" + "conference." + this.xmppUrl;
-			this.getConnection(roomId).then( connection => {
+			var roomUrl = this.getRoomUrl(roomId);
+			this.getConnection(roomId, username).then( connection => {
 				connection.muc.kick(roomUrl, username, "unknow session")
 			})
 		}
@@ -106,12 +106,13 @@ var XMPPVideoRoom = (function() {
 	* @param {string} roomid - id of the XMPP Video Room to join
 	*/
 	XMPPVideoRoom.prototype.query = function(roomId, password) {		
-		this.getConnection(roomId).then( connection => {
+		var username = "monitor" + Math.floor(Math.random()*1000000).toString();
 
-			var roomUrl = roomId + "@" + "conference." + this.xmppUrl;						
+		this.getConnection(roomId, username).then( connection => {
 
-			var name = "monitor" + Math.floor(Math.random()*1000000).toString();
-			connection.muc.join(roomUrl, name, null, this.OnPresence.bind(this,connection,roomId), null, password, null, null);					
+			var roomUrl = this.getRoomUrl(roomId);						
+
+			connection.muc.join(roomUrl, username, null, this.OnPresence.bind(this,connection,roomId), null, password, null, null);					
 
 			connection.muc.queryOccupants(roomUrl, (query) => {
 				var occupants = $(query).find(">query>item");
@@ -228,6 +229,10 @@ var XMPPVideoRoom = (function() {
 		console.log("############onError:" + error)
 	}
 	
+	XMPPVideoRoom.prototype.getRoomUrl = function (roomId) {
+		return roomId + "@" + "conference." + this.xmppUrl
+	}
+
 	/*
 	/* XMPP callback for  jingle 
 	*/		
@@ -366,7 +371,7 @@ var XMPPVideoRoom = (function() {
 			var roomId = session.roomid
 			this.emitState(roomId + '/' + session.name, "leaving");
 
-			var roomUrl = roomId + "@" + "conference." + this.xmppUrl;
+			var roomUrl = this.getRoomUrl(roomId);
 			// close jingle session
 			var iq = $iq({ type: "set",  from: roomUrl +"/" + session.name, to: roomUrl })
 							.c('jingle', {xmlns: 'urn:xmpp:jingle:1'})
@@ -374,7 +379,7 @@ var XMPPVideoRoom = (function() {
 							.up();
 
 
-			this.getConnection(roomId).then( connection => {
+			this.getConnection(roomId, session.name).then( connection => {
 				connection.sendIQ(iq);
 				connection.muc.leave(roomUrl, session.name);
 				connection.flush();
