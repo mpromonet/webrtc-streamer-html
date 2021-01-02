@@ -86,7 +86,8 @@ var XMPPVideoRoom = (function() {
 		if (!found) {
 			var roomUrl = this.getRoomUrl(roomId);
 			this.getConnection(roomId, username).then( connection => {
-				connection.muc.kick(roomUrl, username, "unknow session")
+				connection.muc.kick(roomUrl, username, "You have been kicked.", this.OnPresence.bind(this,connection,roomId))
+				connection.flush()
 			})
 		}
 	}
@@ -197,7 +198,7 @@ var XMPPVideoRoom = (function() {
 					fetch(method, { method: "POST", body: JSON.stringify(candidate) })
 					.then( (response) => (response.json()) )
 					.then( (response) => console.log("method:"+method+ " answer:" +response) )
-					.catch( (error) => this.onError("call " + error ))	
+					.catch( (error) => this.onError("addIceCandidate error:" + error ))	
 			}
 		}
 		delete this.sessionList[sid].earlyCandidates;
@@ -210,7 +211,7 @@ var XMPPVideoRoom = (function() {
 		var answer = sdp.toJingle(jingle); 
 		fetch(this.srvurl + "/api/getIceCandidate?peerid="+ sid).then(r => r.json()).then( (response) => { 
 					this.onReceiveCandidate(connection, roomid, name, answer.node, response);
-		}).catch( error =>  this.onError(error) )
+		}).catch( error =>  this.onError("getIceCandidate error:" + error) )
 	}
 	
 	XMPPVideoRoom.prototype.emitState = function(name, state) {
@@ -325,20 +326,19 @@ var XMPPVideoRoom = (function() {
 	{
 		const resource = Strophe.getResourceFromJid(pres.getAttribute('from'));
 		var msg = "resource:" + resource;
+		
 		const type = pres.getAttribute('type');
 		if (type) {
 			msg += " type:" + type;
 		}
-
-        const xElement = pres.getElementsByTagNameNS('http://jabber.org/protocol/muc#user', 'x')[0];
-		const mucUserItem = xElement && xElement.getElementsByTagName('item')[0];
-		if (mucUserItem) {
-			msg += " jid:" + mucUserItem.getAttribute('jid') 
-						+ " role:" + mucUserItem.getAttribute('role')
-						+ " affiliation:" + mucUserItem.getAttribute('affiliation');
-		}
 		const statusEl = pres.getElementsByTagName('status')[0];
 		if (statusEl) {
+			msg += " status:" + statusEl.getAttribute('code');
+		}
+
+		if (type == "unavailable") {
+			this.emitPresence(roomid + '/' + resource, "out");
+		} else if (statusEl) {
 			var code = statusEl.getAttribute('code');
 			msg += " status:" + code; 
 			if (code === "100" || code === "110" || code === "201" || code === "210") {
@@ -347,10 +347,16 @@ var XMPPVideoRoom = (function() {
 			else if (code === "301" || code === "307") {
 					this.emitPresence(roomid + '/' + resource, "out");
 			}
-		} else if (type == "unavailable") {
-			this.emitPresence(roomid + '/' + resource, "out");
 		} else {
-			this.emitPresence(roomid + '/' + resource, "in");
+			this.emitPresence(roomid + '/'  + resource, "in");
+		}
+
+        const xElement = pres.getElementsByTagNameNS('http://jabber.org/protocol/muc#user', 'x')[0];
+		const mucUserItem = xElement && xElement.getElementsByTagName('item')[0];
+		if (mucUserItem) {
+			msg += " jid:" + mucUserItem.getAttribute('jid') 
+						+ " role:" + mucUserItem.getAttribute('role')
+						+ " affiliation:" + mucUserItem.getAttribute('affiliation');
 		}
 
 		const nickEl = pres.getElementsByTagName('nick')[0];
@@ -371,30 +377,33 @@ var XMPPVideoRoom = (function() {
 			var roomId = session.roomid
 			this.emitState(roomId + '/' + session.name, "leaving");
 
-			var roomUrl = this.getRoomUrl(roomId);
-			// close jingle session
-			var iq = $iq({ type: "set",  from: roomUrl +"/" + session.name, to: roomUrl })
-							.c('jingle', {xmlns: 'urn:xmpp:jingle:1'})
-								.attrs({ action: "session-terminate",  sid})
-							.up();
-
-
 			this.getConnection(roomId, session.name).then( connection => {
+				var roomUrl = this.getRoomUrl(roomId);
+
+				// close jingle session
+				var iq = $iq({ type: "set",  from: roomUrl +"/" + session.name, to: roomUrl })
+								.c('jingle', {xmlns: 'urn:xmpp:jingle:1'})
+									.attrs({ action: "session-terminate",  sid})
+								.up();	
 				connection.sendIQ(iq);
-				connection.muc.leave(roomUrl, session.name);
+
+				// publish on muc
+				connection.muc.leave(roomUrl, session.name, this.OnPresence.bind(this,connection,roomId));
 				connection.flush();
+
+				// close WebRTC session
+				fetch(this.srvurl + "/api/hangup?peerid="+ sid).then(r => r.json()).then( (response) => { 
+					console.log("hangup answer:" +response);
+				}).catch(error => {
+					this.onError("hangup error:" + error);
+				})
+			
+				this.emitState(roomId + '/' + session.name, "leaved");
+
+				// unregister session
+				delete this.sessionList[sid];
 			})				
 
-			// close WebRTC session
-			fetch(this.srvurl + "/api/hangup?peerid="+ sid).then(r => r.json()).then( (response) => { 
-				console.log("hangup answer:" +response);
-			}).catch(error => {
-				this.onError(error);
-			})
-		
-			this.emitState(roomId + '/' + session.name, "leaved");
-
-			delete this.sessionList[sid];
 		}
 	}
 

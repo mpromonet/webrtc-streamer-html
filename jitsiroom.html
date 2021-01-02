@@ -48,13 +48,13 @@
 					$(`#${participant}`).remove();
 					tracks[i].dispose();
 				}
+				delete remoteTracks[participant];
 			}
 		}
 	}
 
 	function onUserLeft(id) {
 		console.log('user left id:' + id);
-		delete remoteTracks[id];
 	}
 
 	function onUserJoined(id) {
