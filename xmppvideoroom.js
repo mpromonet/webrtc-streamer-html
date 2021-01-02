@@ -30,6 +30,9 @@ var XMPPVideoRoom = (function() {
 						reject('Strophe failed to connect.')
 					} else if (status === Strophe.Status.CONNECTED) {
 						console.log('Strophe is connected.');
+						if (connection.disco) {
+							connection.disco.addIdentity('client', 'http://jitsi.org/jitsimeet');
+						}
 						this.connection[key] = connection;
 						resolve(connection);
 					}
@@ -48,7 +51,6 @@ var XMPPVideoRoom = (function() {
 
 		this.getConnection(roomId, username).then( connection => {
 			if (connection.disco) {
-				connection.disco.addIdentity('client', 'http://jitsi.org/jitsimeet');
 				connection.disco.addFeature("urn:xmpp:jingle:1");	
 				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:1");	
 				connection.disco.addFeature("urn:xmpp:jingle:transports:ice-udp:1");	
@@ -86,7 +88,12 @@ var XMPPVideoRoom = (function() {
 		if (!found) {
 			var roomUrl = this.getRoomUrl(roomId);
 			this.getConnection(roomId, username).then( connection => {
-				connection.muc.kick(roomUrl, username, "You have been kicked.", this.OnPresence.bind(this,connection,roomId))
+				var sessionname = "kicker" + Math.floor(Math.random()*1000000).toString();
+		
+				connection.muc.join(roomUrl, sessionname, null, null, null, null, null, null);						
+				connection.muc.kick(roomUrl, username, "Unknown session", () => this.emitPresence(roomId + '/' + username, "out") )
+				connection.muc.leave(roomUrl, sessionname);
+
 				connection.flush()
 			})
 		}
@@ -107,21 +114,20 @@ var XMPPVideoRoom = (function() {
 	* @param {string} roomid - id of the XMPP Video Room to join
 	*/
 	XMPPVideoRoom.prototype.query = function(roomId, password) {		
-		var username = "monitor" + Math.floor(Math.random()*1000000).toString();
+		var sessionname = "query" + Math.floor(Math.random()*1000000).toString();
 
-		this.getConnection(roomId, username).then( connection => {
+		this.getConnection(roomId, sessionname).then( connection => {
 
 			var roomUrl = this.getRoomUrl(roomId);						
 
-			connection.muc.join(roomUrl, username, null, this.OnPresence.bind(this,connection,roomId), null, password, null, null);					
+			connection.muc.join(roomUrl, sessionname, null, this.OnPresence.bind(this,connection,roomId), null, password, null, null);					
 
 			connection.muc.queryOccupants(roomUrl, (query) => {
 				var occupants = $(query).find(">query>item");
 				occupants.toArray().forEach( (item) => {
 					this.emitPresence(roomId + '/'  + item.getAttribute("name"), "in");
 				});
-
-			});
+			}, () => connection.muc.leave(roomUrl, sessionname), () => connection.muc.leave(roomUrl, sessionname));
 		})
 	}
 	
