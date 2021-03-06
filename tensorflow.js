@@ -1,4 +1,3 @@
-console.log("tensorflow.js")
 
 window.runDetect = (model, video, canvas) => {
 

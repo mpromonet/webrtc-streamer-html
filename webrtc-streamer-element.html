@@ -49,7 +49,8 @@
                     } else {
                         let mediaList = event.detail;
                         if (mediaList.length > 0) {
-                            let media = JSON.stringify(mediaList[0])
+                            var random = mediaList.sort(() => .5 - Math.random());
+                            let media = JSON.stringify(random[0])
                             selectorElement.setAttribute('selected', media);
                             streamElement.setAttribute('url', '');
                             streamElement.setAttribute('options', optionsElement.getAttribute('options'));
@@ -75,6 +76,12 @@
 
             optionsElement.addEventListener('change', (event) => {
                 streamElement.setAttribute('options', event.detail.options);
+            });
+
+            streamElement.addEventListener('click', (event) => {
+                const url = JSON.parse(streamElement.getAttribute('url'))
+                const options = streamElement.getAttribute('options')
+                window.open('./webrtc-streamer.html?video='+encodeURIComponent(url.video)+'&audio='+encodeURIComponent(url.audio)+"&options="+encodeURIComponent(options));
             });
             
         });        
