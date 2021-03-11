@@ -39,6 +39,9 @@
                 if (params.has("video") || params.has("audio")) {
                     url = { video:params.get("video"), audio:params.get("audio") };
                 }
+                if (params.has("showoptions")) {
+                    optionsElement.style.display = "block";
+                }
             }
 
             selectorElement.addEventListener('init', (event) => {
