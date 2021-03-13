@@ -173,6 +173,13 @@
 				videoelt.muted = true;
 				videoelt.controls = true;
 				videoelt.playsinline = true;
+				if (layout) {
+					var splitLayout = layout.split("x");
+					var nbrow = parseInt(splitLayout[0]);
+					var nbcol = parseInt(splitLayout[1]);
+					videoelt.width =  window.innerWidth / (nbcol+1)
+					videoelt.height =  window.innerHeight / (nbrow+1) 
+				}
 				divelt.appendChild(videoelt);
 				contentDiv.appendChild(divelt);
 			}			
@@ -207,15 +214,21 @@
 			var splitLayout = layout.split("x");
 			var nbrow = parseInt(splitLayout[0]);
 			var nbcol = parseInt(splitLayout[1]);
-			var tableelt = document.createElement("table");
-			tableelt.id = "layout";
+			const layoutElement = document.createElement("div")
+			layoutElement.id = "layout"
+			layoutElement.style.display= "grid"
+			layoutElement.style.gridTemplateColumns= `repeat(${nbcol}, 1fr)`
 			for (var irow=0; irow<nbrow; irow++) {
-				var row = tableelt.insertRow(0);
 				for (var icol=0; icol<nbcol; icol++) {
-					row.insertCell(0).appendChild(document.createElement("div"));
+					const divElement = document.createElement("div")
+					divElement.id = "cell_" + irow + "_" + icol
+					divElement.style.width = "1fr"
+					divElement.style.height = "1fr"
+					layoutElement.appendChild(divElement);
 				}
 			}			
-			document.getElementById("content").appendChild(tableelt);
+			let content = document.getElementById("content")
+			content.appendChild(layoutElement)			
 		}
 		
 		fetch(webrtcConfig.url + "/api/getMediaList")
