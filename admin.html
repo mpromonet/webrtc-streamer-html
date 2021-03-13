@@ -64,7 +64,7 @@ footer {
 			var streamid = "";
 			var frameHeight = 0;
 			var frameWidth = 0;
-			if (peerConnection.hasOwnProperty("streams")){
+			if (peerConnection && peerConnection.hasOwnProperty("streams")){
 				streamid = Object.keys(peerConnection.streams)[0];
 
 				var stream = Object.values(peerConnection.streams)[0];
