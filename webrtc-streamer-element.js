@@ -1,6 +1,6 @@
 import "./libs/adapter.min.js";
-import "./webrtcstreamer.js";
 import "./tensorflow.js";
+import WebRtcStreamer from "./webrtcstreamer.js";
 
 class WebRTCStreamerElement extends HTMLElement {
 	static get observedAttributes() {
