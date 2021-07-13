@@ -67,10 +67,14 @@ var XMPPVideoRoom = (function() {
 			connection.addHandler(this.OnJingle.bind(this, connection, roomId, username, url), 'urn:xmpp:jingle:1', 'iq', 'set', null, null);
 	
 			var roomUrl = this.getRoomUrl(roomId);			
+			this.emitState(roomId + '/' + username, "joining");
+
 			var extPresence = Strophe.xmlElement('nick', {xmlns:'http://jabber.org/protocol/nick'}, username);
+			connection.muc.join(roomUrl, username, null, null, null, password, null, extPresence);
+
+			var extPresence = Strophe.xmlElement('videomuted', {xmlns:'http://jitsi.org/jitmeet/video'}, false);									
 			connection.muc.join(roomUrl, username, null, this.OnPresence.bind(this,connection,roomId), null, password, null, extPresence);				
 			
-			this.emitState(roomId + '/' + username, "joining");
 			this.emitState(roomId + '/' + username, "joined");
 		});
 	}
