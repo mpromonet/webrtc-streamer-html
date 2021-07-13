@@ -52,14 +52,17 @@ var XMPPVideoRoom = (function() {
 		this.getConnection(roomId, username).then( connection => {
 			if (connection.disco) {
 				connection.disco.addFeature("urn:xmpp:jingle:1");	
+				connection.disco.addFeature("urn:xmpp:jingle:errors:1");	
 				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:1");	
-				connection.disco.addFeature("urn:xmpp:jingle:transports:ice-udp:1");	
-				connection.disco.addFeature("urn:xmpp:jingle:apps:dtls:0");	
+				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:info:1")
+				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:errors:1")				
 				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:audio");	
 				connection.disco.addFeature("urn:xmpp:jingle:apps:rtp:video");	
+				connection.disco.addFeature("urn:xmpp:jingle:apps:dtls:0");	
+				connection.disco.addFeature("urn:xmpp:jingle:transports:ice-udp:1");
+				connection.disco.addFeature("urn:xmpp:ping");	
 				connection.disco.addFeature("urn:ietf:rfc:5761")
 				connection.disco.addFeature("urn:ietf:rfc:5888"); // a=group, e.g. bundle
-				
 			}		
 			connection.addHandler(this.OnJingle.bind(this, connection, roomId, username, url), 'urn:xmpp:jingle:1', 'iq', 'set', null, null);
 	
@@ -175,7 +178,7 @@ var XMPPVideoRoom = (function() {
 			var id = connection.sendIQ(iq, () => {
 				console.log("===> xmpp transport-info ok sid:" + sid);		
 			},(error) => {
-				console.log("############transport-info error sid:" + sid + " error:" + error);
+				console.warn("############transport-info error sid:" + sid + " error:" + error.textContent);
 			});
 		});	
 
@@ -183,8 +186,8 @@ var XMPPVideoRoom = (function() {
 			console.log("===> xmpp session-accept ok sid:" + sid);
 			this.emitState(roomid + '/' + name, "published");			
 		},(error) => {
-			console.log("############session-accept error sid:" + sid + " error:" + error);
-		});
+			console.warn("############session-accept error sid:" + sid + " error:" + error.textContent);
+		});	
 	}
 
 	/*
@@ -202,22 +205,23 @@ var XMPPVideoRoom = (function() {
 					console.log("===> webrtc candidate :" + JSON.stringify(candidate));
 					var method = this.srvurl + "/api/addIceCandidate?peerid="+ sid;
 					fetch(method, { method: "POST", body: JSON.stringify(candidate) })
-					.then( (response) => (response.json()) )
-					.then( (response) => console.log("method:"+method+ " answer:" +response) )
-					.catch( (error) => this.onError("addIceCandidate error:" + error ))	
+						.then( (response) => (response.json()) )
+						.then( (response) => console.log("method:"+method+ " answer:" +response) )
+						.catch( (error) => this.onError("addIceCandidate error:" + error ))	
 			}
 		}
 		delete this.sessionList[sid].earlyCandidates;
 				
-		var sdp = new SDP(data.sdp);
-		var iqAnswer = $iq({ type: "set",  from: iq.getAttribute("to"), to: iq.getAttribute("from") })
-		var jingle = iqAnswer.c('jingle', {xmlns: 'urn:xmpp:jingle:1'})
-						.attrs({ action: "session-accept",  sid, responder:iq.getAttribute("to") });
+		var jingle = $iq({ type: "set",  from: iq.getAttribute("to"), to: iq.getAttribute("from") })
+						.c('jingle', {xmlns: 'urn:xmpp:jingle:1'})
+							.attrs({ action: "session-accept",  sid, responder:iq.getAttribute("to") });
 
-		var answer = sdp.toJingle(jingle); 
-		fetch(this.srvurl + "/api/getIceCandidate?peerid="+ sid).then(r => r.json()).then( (response) => { 
-					this.onReceiveCandidate(connection, roomid, name, answer.node, response);
-		}).catch( error =>  this.onError("getIceCandidate error:" + error) )
+		var sdp = new SDP(data.sdp);
+		var answer = sdp.toJingle(jingle, 'initiator'); 
+		fetch(this.srvurl + "/api/getIceCandidate?peerid="+ sid)
+			.then(r => r.json())
+			.then( (response) => this.onReceiveCandidate(connection, roomid, name, answer.node, response) )
+			.catch( error =>  this.onError("getIceCandidate error:" + error) )
 	}
 	
 	XMPPVideoRoom.prototype.emitState = function(name, state) {
@@ -233,7 +237,7 @@ var XMPPVideoRoom = (function() {
 	}	
 	
 	XMPPVideoRoom.prototype.onError = function (error) {
-		console.log("############onError:" + error)
+		console.warn("############onError:" + error)
 	}
 	
 	XMPPVideoRoom.prototype.getRoomUrl = function (roomId) {
@@ -249,8 +253,9 @@ var XMPPVideoRoom = (function() {
 		var action = jingle.getAttribute("action");
 		const fromJid = iq.getAttribute('from');
 		const toJid = iq.getAttribute('to');
-		console.log("OnJingle from:" + fromJid + " to:" + toJid
-                                      + " sid:" + sid + " action:" + action);
+		console.log("OnJingle from:" + fromJid + " to:" + toJid + " sid:" + sid + " action:" + action)
+		console.log(iq.innerHTML);
+
 		var id = iq.getAttribute("id");
 		var ack = $iq({ type: "result", to: fromJid, id })
 
@@ -276,7 +281,7 @@ var XMPPVideoRoom = (function() {
 				}
 				method += "&options="+encodeURIComponent("rtptransport=tcp&timeout=60");	
 				fetch(method, { method: "POST", body: JSON.stringify({type:"offer",sdp:sdp.raw}) })
-					.then( (response) => (response.json()) )
+					.then( (response) => response.json() )
 					.then( (response) => this.onCall(connection, roomid, name, iq, response ) )
 					.catch( (error) => this.onError("call " + error ))
 
@@ -320,7 +325,10 @@ var XMPPVideoRoom = (function() {
 			connection.sendIQ(ack);		
 			console.log("<=== xmpp session-terminate sid:" + sid + " reason:" + jingle.querySelector("reason").textContent);
 			this.leaveSession(sid);
-		}
+		} else {			
+			connection.sendIQ(ack);		
+			console.log("<=== unknown action");
+		}		
 					
 		return true;		
 	}
@@ -398,11 +406,14 @@ var XMPPVideoRoom = (function() {
 				connection.flush();
 
 				// close WebRTC session
-				fetch(this.srvurl + "/api/hangup?peerid="+ sid).then(r => r.json()).then( (response) => { 
-					console.log("hangup answer:" +response);
-				}).catch(error => {
-					this.onError("hangup error:" + error);
-				})
+				fetch(this.srvurl + "/api/hangup?peerid="+ sid)
+					.then(r => r.json())
+					.then( (response) => { 
+						console.log("hangup answer:" +response);
+					})
+					.catch(error => {
+						this.onError("hangup error:" + error);
+					})
 			
 				this.emitState(roomId + '/' + session.name, "leaved");
 

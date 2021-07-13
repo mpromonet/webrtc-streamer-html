@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Jitsi Room</title>
 	<link rel="stylesheet" type="text/css" href="styles.css">
-    <script src="libs/jquery-2.1.1.min.js"></script>
+    <script src="libs/jquery-3.5.1.min.js"></script>
     <script src="libs/lib-jitsi-meet.min.js"></script>
 	<script src="xmppvideoroom.json" ></script>
 	<link rel="icon" type="image/ico" href="jitsi.ico" />
@@ -97,7 +97,7 @@
 	}
 
 	function join(serverUrl, roomName) {
-		JitsiMeetJS.setLogLevel(JitsiMeetJS.logLevels.INFO);
+		JitsiMeetJS.setLogLevel(JitsiMeetJS.logLevels.DEBUG);
 		JitsiMeetJS.init({});
 
 		const options = {
