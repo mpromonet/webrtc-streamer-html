@@ -15,8 +15,6 @@ var WebRtcStreamer = function WebRtcStreamer (videoElement, srvurl) {
 	this.srvurl           = srvurl || location.protocol+"//"+window.location.hostname+":"+window.location.port;
 	this.pc               = null;    
 
-	this.pcOptions        = { "optional": [{"DtlsSrtpKeyAgreement": true} ] };
-
 	this.mediaConstraints = { offerToReceiveAudio: true, offerToReceiveVideo: true };
 
 	this.iceServers = null;
@@ -144,8 +142,8 @@ WebRtcStreamer.prototype.getIceCandidate = function() {
 * create RTCPeerConnection 
 */
 WebRtcStreamer.prototype.createPeerConnection = function() {
-	console.log("createPeerConnection  config: " + JSON.stringify(this.pcConfig) + " option:"+  JSON.stringify(this.pcOptions));
-	this.pc = new RTCPeerConnection(this.pcConfig, this.pcOptions);
+	console.log("createPeerConnection  config: " + JSON.stringify(this.pcConfig));
+	this.pc = new RTCPeerConnection(this.pcConfig);
 	var pc = this.pc;
 	pc.peerid = Math.random();		
 	
@@ -204,7 +202,7 @@ WebRtcStreamer.prototype.createPeerConnection = function() {
 		console.log("Cannor create datachannel error: " + e);
 	}	
 	
-	console.log("Created RTCPeerConnnection with config: " + JSON.stringify(this.pcConfig) + "option:"+  JSON.stringify(this.pcOptions) );
+	console.log("Created RTCPeerConnnection with config: " + JSON.stringify(this.pcConfig) );
 	return pc;
 }
 
