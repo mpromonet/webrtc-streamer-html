@@ -300,7 +300,9 @@ WebRtcStreamer.prototype.onError = function(status) {
 return WebRtcStreamer;
 })();
 
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined')
-	module.exports = WebRtcStreamer;
-else
+if (typeof window !== 'undefined' && typeof window.document !== 'undefined') {
 	window.WebRtcStreamer = WebRtcStreamer;
+}
+else if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+	module.exports = WebRtcStreamer;
+}

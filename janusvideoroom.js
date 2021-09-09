@@ -317,8 +317,10 @@ JanusVideoRoom.prototype.onError = function(status) {
 return JanusVideoRoom;
 })();
 
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined')
-	module.exports = JanusVideoRoom;
-else
+if (typeof window !== 'undefined' && typeof window.document !== 'undefined') {
 	window.JanusVideoRoom = JanusVideoRoom;
-
+}
+else if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+	module.exports = JanusVideoRoom;
+}	
+	
