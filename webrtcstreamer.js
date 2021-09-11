@@ -303,6 +303,6 @@ return WebRtcStreamer;
 if (typeof window !== 'undefined' && typeof window.document !== 'undefined') {
 	window.WebRtcStreamer = WebRtcStreamer;
 }
-else if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
 	module.exports = WebRtcStreamer;
 }

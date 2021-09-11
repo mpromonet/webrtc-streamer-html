@@ -320,7 +320,7 @@ return JanusVideoRoom;
 if (typeof window !== 'undefined' && typeof window.document !== 'undefined') {
 	window.JanusVideoRoom = JanusVideoRoom;
 }
-else if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
 	module.exports = JanusVideoRoom;
 }	
 	

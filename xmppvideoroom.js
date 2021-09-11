@@ -435,7 +435,7 @@ var XMPPVideoRoom = (function() {
 if (typeof window !== 'undefined' && typeof window.document !== 'undefined') {
 	window.XMPPVideoRoom = XMPPVideoRoom;
 }
-else if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
 	module.exports = XMPPVideoRoom;
 }	
 
