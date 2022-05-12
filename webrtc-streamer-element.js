@@ -84,14 +84,14 @@ class WebRTCStreamerElement extends HTMLElement {
 			let imgLoaded;
 			if (reconnect) {
 				this.disconnectStream();
+
+				imgLoaded = new Promise( (resolve,rejet) => {
+					this.videoElement.addEventListener('loadedmetadata', () => resolve(), { once: true });
+				} );
+
 				this.webRtcServer = new WebRtcStreamer(this.videoElement, webrtcurl);
 				this.webRtcServer.connect(videostream, audiostream, this.getAttribute("options"));
 
-				imgLoaded = new Promise( (resolve,rejet) => {
-					this.videoElement.addEventListener('loadeddata', (event) => { 
-						resolve(event)
-					});
-				} );
 			} else {
 				imgLoaded = new Promise( (resolve) => resolve() );
 			}
@@ -101,7 +101,7 @@ class WebRTCStreamerElement extends HTMLElement {
 			Promise.all([imgLoaded, modelLoaded]).then(([event,model]) => {	
 				this.setVideoSize(this.videoElement.videoWidth, this.videoElement.videoHeight)
 
-				if (model) {
+				if (model && modelLoaded.run) {
 					model.run = modelLoaded.run;
 					model.run(model, this.videoElement, this.canvasElement)
 					modelLoaded.model = model;

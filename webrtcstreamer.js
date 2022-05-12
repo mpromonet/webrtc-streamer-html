@@ -57,8 +57,11 @@ WebRtcStreamer.prototype.connect = function(videourl, audiourl, options, localst
  * Disconnect a WebRTC Stream and clear videoElement source
 */
 WebRtcStreamer.prototype.disconnect = function() {		
-	if (this.videoElement) {
-		this.videoElement.src = "";
+	if (this.videoElement?.srcObject) {
+		this.videoElement.srcObject.getTracks().forEach(track => {
+			track.stop()
+			this.videoElement.srcObject.removeTrack(track);
+		});
 	}
 	if (this.pc) {
 		fetch(this.srvurl + "/api/hangup?peerid="+this.pc.peerid)
