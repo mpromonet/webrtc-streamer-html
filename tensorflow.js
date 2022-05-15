@@ -24,9 +24,11 @@ window.runDetect = (model, video, canvas) => {
                 predictions[i].bbox[1] > 10 ? predictions[i].bbox[1] - 5 : 10);
         }
 
-        if (model.run) {
-            window.setTimeout(() => { model.run(model, video, canvas); }, 120);
-        }
+        window.setTimeout(() => { 
+            if (model.run) {
+                model.run(model, video, canvas); 
+             }
+        }, 120);
     });
 }
 
@@ -70,9 +72,11 @@ window.runPosenet = (model, video, canvas) => {
 
         });
 
-        if (model.run) {
-            window.setTimeout(() => { model.run(model, video, canvas); }, 120);
-        }
+        window.setTimeout(() => { 
+            if (model.run) {
+                model.run(model, video, canvas); 
+             }
+        }, 120);
     });
 }
 
@@ -113,9 +117,11 @@ window.runDeeplab = (model, video, canvas) => {
             cnt++
         });
 
-        if (model.run) {
-            window.setTimeout(() => { model.run(model, video, canvas); }, 120);
-        }
+        window.setTimeout(() => { 
+            if (model.run) {
+                model.run(model, video, canvas); 
+             }
+        }, 120);
     });
 }
 
@@ -135,9 +141,36 @@ window.runbodyPix = (model, video, canvas) => {
             bodyPix.drawMask(canvas, video, coloredPartImageData, 0.3);        
         }
 
-        if (model.run) {
-            window.setTimeout(() => { model.run(model, video, canvas); }, 120);
-        }
+        window.setTimeout(() => { 
+            if (model.run) {
+                model.run(model, video, canvas); 
+             }
+        }, 120);
     });
 }
 
+window.runblazeface = (model, video, canvas) => {
+
+    console.time('runblazeface');
+    model.estimateFaces(video, false).then(predictions => {
+        console.timeEnd('runblazeface');
+
+        console.log('predictions: ', predictions);
+
+        const ctx = canvas.getContext('2d');
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < predictions.length; i++) {
+            const start = predictions[i].topLeft;
+            const end = predictions[i].bottomRight;
+            const size = [end[0] - start[0], end[1] - start[1]];
+      
+            ctx.rect(start[0], start[1], size[0], size[1]);
+        }
+
+        window.setTimeout(() => { 
+            if (model.run) {
+                model.run(model, video, canvas); 
+             }
+        }, 120);
+    });
+}

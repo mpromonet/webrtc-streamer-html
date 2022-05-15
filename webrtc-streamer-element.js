@@ -22,7 +22,7 @@ class WebRTCStreamerElement extends HTMLElement {
 		this.titleElement = this.shadowDOM.getElementById("title");
 		this.videoElement = this.shadowDOM.getElementById("video");
 		this.canvasElement = this.shadowDOM.getElementById("canvas");
-		this.modelLoaded = [];
+		this.modelLoaded = {};
 	}
 	connectedCallback() {
 		this.connectStream(true);
@@ -96,13 +96,14 @@ class WebRTCStreamerElement extends HTMLElement {
 				imgLoaded = new Promise( (resolve) => resolve() );
 			}
 
-			let modelLoaded = this.getModelPromise(this.getAttribute("algo"));
+			const algo = this.getAttribute("algo")
+			let modelLoaded = this.getModelPromise(algo);
 		
 			Promise.all([imgLoaded, modelLoaded]).then(([event,model]) => {	
 				this.setVideoSize(this.videoElement.videoWidth, this.videoElement.videoHeight)
 
-				if (model && modelLoaded.run) {
-					model.run = modelLoaded.run;
+				model.run = this.getModelRunFunction(algo);
+				if (model.run) {
 					model.run(model, this.videoElement, this.canvasElement)
 					modelLoaded.model = model;
 				}
@@ -117,7 +118,6 @@ class WebRTCStreamerElement extends HTMLElement {
 		this.canvasElement.width = width;
 		this.canvasElement.height = height;
 	}
-
 	getModelPromise(algo) {
 		let modelLoaded;
 		if (this.modelLoaded[algo]) {
@@ -126,22 +126,36 @@ class WebRTCStreamerElement extends HTMLElement {
 		else {
 			if (algo === "posenet") {
 				modelLoaded = posenet.load();
-				modelLoaded.run = runPosenet;
 			} else if (algo === "deeplab") {
 				modelLoaded = deeplab.load()
-				modelLoaded.run = runDeeplab;
 			} else if (algo === "cocossd") {
 				modelLoaded = cocoSsd.load();
-				modelLoaded.run = runDetect;
 			} else if (algo === "bodyPix") {
 				modelLoaded = bodyPix.load();
-				modelLoaded.run = runbodyPix;
+			} else if (algo === "blazeface") {
+				modelLoaded = blazeface.load();
 			} else {
 				modelLoaded = new Promise( (resolve) => resolve() );
 			}
 			this.modelLoaded[algo] = modelLoaded;
 		} 
 		return modelLoaded;
+	}
+
+	getModelRunFunction(algo) {
+		let modelFunction;
+		if (algo === "posenet") {
+			modelFunction = runPosenet;
+		} else if (algo === "deeplab") {
+			modelFunction = runDeeplab;
+		} else if (algo === "cocossd") {
+			modelFunction = runDetect;
+		} else if (algo === "bodyPix") {
+			modelFunction = runbodyPix;
+		} else if (algo === "blazeface") {
+			modelFunction = runblazeface;
+		}
+		return modelFunction;
 	}
 }
 
