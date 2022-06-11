@@ -17,26 +17,21 @@
 				options = params.get("options");
 			}
 		} 	    
+   }
 
-		window.onload         = function() { 
-			this.webRtcServer      = new WebRtcStreamer("remotevideo", webrtcConfig.url);
-			navigator.mediaDevices.getUserMedia({video: true}).then(stream => {
-			
-				var videoElement = document.getElementById("localvideo");
-				videoElement.src = URL.createObjectURL(stream);
-				videoElement.play(); 
+   window.onload         = function() { 
+		this.webRtcServer      = new WebRtcStreamer("remotevideo", webrtcConfig.url);
+		navigator.mediaDevices.getUserMedia({video: true, audio: true}).then(stream => {
 		
-				this.webRtcServer.connect(url.video, url.audio, options, stream) 
-			})
-		}
-        window.onbeforeunload = function() { this.webRtcServer.disconnect() }
-    } else {
-	if (typeof URLSearchParams != 'undefined') {
-		alert("WebRTC stream name to connect is missing\n\nUsage :" + window.location + "?video=<WebRTC video stream name>&audio=<WebRTC audio stream name>&options=<WebRTC options>")
-	} else {
-		alert("WebRTC stream name to connect is missing\n\nUsage :" + window.location + "?<WebRTC video stream name>")
+			var videoElement = document.getElementById("localvideo");
+			videoElement.srcObject = stream;
+			videoElement.play(); 
+	
+			this.webRtcServer.connect(url.video, url.audio, options, stream) 
+		})
 	}
-    }
+	window.onbeforeunload = function() { this.webRtcServer.disconnect() }
+
 </script>
 </head>
 <body> 
