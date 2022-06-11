@@ -45,7 +45,7 @@ WebRtcStreamer.prototype.connect = function(videourl, audiourl, options, localst
 		fetch(this.srvurl + "/api/getIceServers")
 			.then(this._handleHttpErrors)
 			.then( (response) => (response.json()) )
-			.then( (response) =>  this.onReceiveGetIceServers.call(this,response, videourl, audiourl, options, localstream))
+			.then( (response) =>  this.onReceiveGetIceServers(response, videourl, audiourl, options, localstream))
 			.catch( (error) => this.onError("getIceServers " + error ))
 				
 	} else {
@@ -64,7 +64,7 @@ WebRtcStreamer.prototype.disconnect = function() {
 		});
 	}
 	if (this.pc) {
-		fetch(this.srvurl + "/api/hangup?peerid="+this.pc.peerid)
+		fetch(this.srvurl + "/api/hangup?peerid=" + this.pc.peerid)
 			.then(this._handleHttpErrors)
 			.catch( (error) => this.onError("hangup " + error ))
 
@@ -88,7 +88,7 @@ WebRtcStreamer.prototype.onReceiveGetIceServers = function(iceServers, videourl,
 	try {            
 		this.createPeerConnection();
 
-		var callurl = this.srvurl + "/api/call?peerid="+ this.pc.peerid+"&url="+encodeURIComponent(videourl);
+		var callurl = this.srvurl + "/api/call?peerid=" + this.pc.peerid + "&url=" + encodeURIComponent(videourl);
 		if (audiourl) {
 			callurl += "&audiourl="+encodeURIComponent(audiourl);
 		}
@@ -104,25 +104,23 @@ WebRtcStreamer.prototype.onReceiveGetIceServers = function(iceServers, videourl,
 		this.earlyCandidates.length = 0;
 		
 		// create Offer
-		var bind = this;
-		this.pc.createOffer(this.mediaConstraints).then(function(sessionDescription) {
+		this.pc.createOffer(this.mediaConstraints).then((sessionDescription) => {
 			console.log("Create offer:" + JSON.stringify(sessionDescription));
 			
-			bind.pc.setLocalDescription(sessionDescription
-				, function() {
+			this.pc.setLocalDescription(sessionDescription)
+				.then(() => {
 					fetch(callurl, { method: "POST", body: JSON.stringify(sessionDescription) })
-						.then(bind._handleHttpErrors)
+						.then(this._handleHttpErrors)
 						.then( (response) => (response.json()) )
-						.catch( (error) => bind.onError("call " + error ))
-						.then( (response) =>  bind.onReceiveCall.call(bind,response) )
-						.catch( (error) => bind.onError("call " + error ))
+						.catch( (error) => this.onError("call " + error ))
+						.then( (response) =>  this.onReceiveCall(response) )
+						.catch( (error) => this.onError("call " + error ))
 				
-				}
-				, function(error) {
+				}, (error) => {
 					console.log ("setLocalDescription error:" + JSON.stringify(error)); 
-				} );
+				});
 			
-		}, function(error) { 
+		}, (error) => { 
 			alert("Create offer error:" + JSON.stringify(error));
 		});
 
@@ -137,8 +135,8 @@ WebRtcStreamer.prototype.getIceCandidate = function() {
 	fetch(this.srvurl + "/api/getIceCandidate?peerid=" + this.pc.peerid)
 		.then(this._handleHttpErrors)
 		.then( (response) => (response.json()) )
-		.then( (response) =>  this.onReceiveCandidate.call(this, response))
-		.catch( (error) => bind.onError("getIceCandidate " + error ))
+		.then( (response) =>  this.onReceiveCandidate(response))
+		.catch( (error) => this.onError("getIceCandidate " + error ))
 }
 					
 /*
@@ -150,22 +148,21 @@ WebRtcStreamer.prototype.createPeerConnection = function() {
 	var pc = this.pc;
 	pc.peerid = Math.random();		
 	
-	var bind = this;
-	pc.onicecandidate = function(evt) { bind.onIceCandidate.call(bind, evt); };
-	pc.onaddstream    = function(evt) { bind.onAddStream.call(bind,evt); };
-	pc.oniceconnectionstatechange = function(evt) {  
+	pc.onicecandidate = (evt) => this.onIceCandidate(evt);
+	pc.onaddstream    = (evt) => this.onAddStream(evt);
+	pc.oniceconnectionstatechange = (evt) => {  
 		console.log("oniceconnectionstatechange  state: " + pc.iceConnectionState);
-		if (bind.videoElement) {
+		if (this.videoElement) {
 			if (pc.iceConnectionState === "connected") {
-				bind.videoElement.style.opacity = "1.0";
+				this.videoElement.style.opacity = "1.0";
 			}			
 			else if (pc.iceConnectionState === "disconnected") {
-				bind.videoElement.style.opacity = "0.25";
+				this.videoElement.style.opacity = "0.25";
 			}			
 			else if ( (pc.iceConnectionState === "failed") || (pc.iceConnectionState === "closed") )  {
-				bind.videoElement.style.opacity = "0.5";
+				this.videoElement.style.opacity = "0.5";
 			} else if (pc.iceConnectionState === "new") {
-				bind.getIceCandidate.call(bind)
+				this.getIceCandidate();
 			}
 		}
 	}
@@ -244,10 +241,9 @@ WebRtcStreamer.prototype.onAddStream = function(event) {
 	this.videoElement.srcObject = event.stream;
 	var promise = this.videoElement.play();
 	if (promise !== undefined) {
-	  var bind = this;
-	  promise.catch(function(error) {
+	  promise.catch((error) => {
 		console.warn("error:"+error);
-		bind.videoElement.setAttribute("controls", true);
+		this.videoElement.setAttribute("controls", true);
 	  });
 	}
 }
@@ -256,20 +252,19 @@ WebRtcStreamer.prototype.onAddStream = function(event) {
 * AJAX /call callback
 */
 WebRtcStreamer.prototype.onReceiveCall = function(dataJson) {
-	var bind = this;
+
 	console.log("offer: " + JSON.stringify(dataJson));
 	var descr = new RTCSessionDescription(dataJson);
-	this.pc.setRemoteDescription(descr
-		, function()      { 
+	this.pc.setRemoteDescription(descr).then(() =>  { 
 			console.log ("setRemoteDescription ok");
-			while (bind.earlyCandidates.length) {
-				var candidate = bind.earlyCandidates.shift();
-				bind.addIceCandidate.call(bind, bind.pc.peerid, candidate);				
+			while (this.earlyCandidates.length) {
+				var candidate = this.earlyCandidates.shift();
+				this.addIceCandidate(this.pc.peerid, candidate);				
 			}
 		
-			bind.getIceCandidate.call(bind)
+			this.getIceCandidate()
 		}
-		, function(error) { 
+		, (error) => { 
 			console.log ("setRemoteDescription error:" + JSON.stringify(error)); 
 		});
 }	
@@ -284,9 +279,8 @@ WebRtcStreamer.prototype.onReceiveCandidate = function(dataJson) {
 			var candidate = new RTCIceCandidate(dataJson[i]);
 			
 			console.log("Adding ICE candidate :" + JSON.stringify(candidate) );
-			this.pc.addIceCandidate(candidate
-				, function()      { console.log ("addIceCandidate OK"); }
-				, function(error) { console.log ("addIceCandidate error:" + JSON.stringify(error)); } );
+			this.pc.addIceCandidate(candidate).then( () =>      { console.log ("addIceCandidate OK"); }
+				, (error) => { console.log ("addIceCandidate error:" + JSON.stringify(error)); } );
 		}
 		this.pc.addIceCandidate();
 	}
