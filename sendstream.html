@@ -5,13 +5,13 @@
 <script src="webrtcstreamer.js" ></script>
 <script src="webrtcstreamer.json" ></script>
 <script>        
+    let video = "";  
+    let options = webrtcConfig.options;
     if (location.search.slice(1)) {
-		var url = { video:location.search.slice(1) };  
-		var options = webrtcConfig.options;
 		if (typeof URLSearchParams != 'undefined') {
 			var params = new URLSearchParams(location.search);
-			if (params.has("video") || params.has("audio")) {
-				url = { video:params.get("video"), audio:params.get("audio") };
+			if (params.has("video")) {
+				video = params.get("video");
 			}
 			if (params.has("options")) {
 				options = params.get("options");
@@ -27,7 +27,7 @@
 			videoElement.srcObject = stream;
 			videoElement.play(); 
 	
-			this.webRtcServer.connect(url.video, url.audio, options, stream) 
+			this.webRtcServer.connect(video, "", options, stream) 
 		})
 	}
 	window.onbeforeunload = function() { this.webRtcServer.disconnect() }
