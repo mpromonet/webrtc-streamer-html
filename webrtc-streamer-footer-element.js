@@ -28,7 +28,7 @@ class WebRTCStreamerFooterElement extends HTMLElement {
 		let footerElement = this.shadowDOM.getElementById("footer");
 		const webrtcurl = this.getAttribute("webrtcurl") || "";
 		fetch(webrtcurl + "/api/version").then(r => r.text()).then( function (response) { 
-			footerElement.innerHTML = "<p><a href='https://github.com/mpromonet/webrtc-streamer'>WebRTC-Streamer</a> " + JSON.parse(response).split(" ")[0] + "</p>";			
+			footerElement.innerHTML = "<p><a href='https://github.com/mpromonet/webrtc-streamer'>WebRTC-Streamer</a> " + response.split(" ")[0] + "</p>";			
 		});	
 	
 	}

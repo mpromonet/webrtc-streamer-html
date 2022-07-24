@@ -4,7 +4,8 @@
 <script src="janusvideoroom.json" ></script>
 <script src="janusvideoroom.js" ></script>
 <script src="webrtcstreamer.json" ></script>
-<link rel="stylesheet" type="text/css" href="styles.css"> 
+<link rel="stylesheet" type="text/css" href="styles.css">
+<script type="module" src="webrtc-streamer-footer-element.js"></script>
 </head>
 <body> 
 	Janus Url:<input id="janusUrl" type="text" size="50" /> 
@@ -12,7 +13,7 @@
 	<input type="button" onclick="connect()" value="ConnectRoom" />
 	<input type="button" onclick="openroom()" value="OpenRoom" />
 	<nav id="menu"></nav>
-	<footer id="footer"></footer>
+	<webrtc-streamer-footer></webrtc-streamer-footer>
 </body>
 <script>
 	// set default value
@@ -33,8 +34,8 @@
 	function clientCallBack (name, status) {
 		console.log("clientCallBack name:"+ name + " status:"+ status);
 
-		var navId = "nav_" + name;
-		var navElt = document.querySelector(`#${navId}`);
+		const navId = "nav_" + name;
+		const navElt = document.querySelector(`[id="${navId}"]`);
 		if (navElt) {
 			if (status == "down") {
 				navElt.className = "";
@@ -123,29 +124,17 @@
 		}		
 	}
 	
-	// ------------------------------------------
-	// Fill version
-	// ------------------------------------------	
-	function onVersion(version) {
-		document.getElementById("footer").innerHTML = "<p><a href='https://github.com/mpromonet/webrtc-streamer'>WebRTC-Streamer</a>"
-							+ " " + version.split(" ")[0] + "</p>";
-	}
 	
 	// load
 	window.onload         = function() { 
 		fetch(webrtcConfig.url + "/api/getMediaList")
 			.then( (response) => (response.json()) )
 			.then( (response) => onGetDeviceList(response) )
-			.catch( (error) => this.onError("getMediaList " + error ))
-
-		fetch(webrtcConfig.url + "/api/version")
-			.then( (response) => (response.json()) )
-			.then( (response) => onVersion(response) )
-			.catch( (error) => this.onError("version " + error ))			
-
+			.catch( (error) => console.log("getMediaList " + error ));
+		connect();
 	} 
 	
-	// unload
+	// unload	
 	window.onbeforeunload = function() { 
 	}
 </script>
