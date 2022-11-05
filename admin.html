@@ -111,7 +111,7 @@ footer {
 		getPeerConnectionList();
 		window.setInterval(()=> { getPeerConnectionList(); }, 2000);
 		fetch(webrtcConfig.url + "/api/version")
-			.then( (response) => response.json() ) 
+			.then( (response) => response.text() ) 
 			.then( (response) => onVersion( response ))
 		fetch('api/log')
 			.then( (response) => response.text() ) 

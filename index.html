@@ -236,7 +236,7 @@
 			.then( (response) => onGetDeviceList( response ))
 		
 		fetch(webrtcConfig.url + "/api/version")
-			.then( (response) => response.json() ) 
+			.then( (response) => response.text() ) 
 			.then( (response) => onVersion( response ))
 
 	} 
