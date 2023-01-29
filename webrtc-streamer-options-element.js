@@ -41,13 +41,9 @@ class WebRTCStreamerOptionsElement extends HTMLElement {
 			let input = document.createElement("input");
 			input.type = "text";
 			input.value = v;
-			input.onchange = () => {
-				this.params.set(k, input.value);
-
-			}
+			input.onchange = () => this.params.set(k, input.value);
 			optElement.appendChild(input);		
-			let br = document.createElement("br");
-			optElement.appendChild(br);		
+			optElement.appendChild(document.createElement("br"));		
 		}	
 	}
 
