@@ -1,0 +1,43 @@
+<html>
+<head>
+    <title>WebRTC Streamer using WHEP</title>
+    <link rel="icon" type="image/png" href="webrtc.png" />
+    <link rel="stylesheet" type="text/css" href="styles.css">
+    <style>
+        whep-video {
+            text-align: center;
+        }        
+    </style>
+    <script type="module" src="webrtc-streamer-element.js"></script>
+    <script type="module" src="webrtc-streamer-footer-element.js"></script>
+    <script type="module" src="webrtc-streamer-menu-element.js"></script>
+    <script type="module" src="webrtc-streamer-options-element.js"></script>
+    <script type="module" src="webrtc-streamer-algo-element.js"></script>
+    <script src="./libs/whep-video.component.js"></script>
+</head>
+<body>
+  <webrtc-streamer-menu id="selector" ></webrtc-streamer-menu>    
+  <whep-video id="stream" muted autoplay></whep-video>
+  <webrtc-streamer-footer></webrtc-streamer-footer>
+  <script>
+    customElements.whenDefined('webrtc-streamer-menu').then(() => {
+        let selectorElement = document.getElementById("selector");
+        let streamElement = document.getElementById("stream");
+
+        selectorElement.addEventListener('init', (event) => {
+                let mediaList = event.detail;
+                if (mediaList.length > 0) {
+                    const random = mediaList.sort(() => .5 - Math.random());
+                    let media = JSON.stringify(random[0])
+                    selectorElement.setAttribute('selected', media);
+                }
+        });
+        selectorElement.addEventListener('change', (event) => {
+            const url= JSON.parse(event.detail.url);
+            streamElement.removeAttribute('src');
+            streamElement.setAttribute('src', `${location.protocol}//${location.hostname}:${location.port}/api/whep?url=${encodeURIComponent(url.video)}&audio=${encodeURIComponent(url.audio)}&options=rtptransport%3dtcp%26timeout%3d60`);
+        });
+    });
+  </script>      
+</body>
+</html>
