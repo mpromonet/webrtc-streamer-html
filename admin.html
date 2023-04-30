@@ -1,18 +1,20 @@
 <html>
 <head>
-<script src="libs/ag-grid.min.js"></script>
-<script src="webrtcconfig.js" ></script>
-<script src="webrtcstreamer.js" ></script>
-<style type="text/css">
-.cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-footer {
-  text-align: center; 
-}
-</style> 
+	<title>WebRTC Streamer Info</title>
+	<link rel="icon" type="image/png" href="info.png" />
+	<script src="libs/ag-grid.min.js"></script>
+	<script src="webrtcconfig.js" ></script>
+	<script src="webrtcstreamer.js" ></script>
+	<style type="text/css">
+	.cell {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	}
+	footer {
+	text-align: center; 
+	}
+	</style> 
 </head>
 <body> 
 	<div>
@@ -30,22 +32,22 @@ footer {
 <script>	
 	// columns
 	var columnDefs = [
-	    { headerName: "Peerid" , field: "peerid",  cellClass: "cell" },
-	    { headerName: "Stream", field: "streamid",  cellClass: "cell" },
-	    { headerName: "Size", field: "size",  cellClass: "cell" },
-	    { headerName: "Action" , cellClass: "cell", 
-	      field: "action", 
+	    { headerName: "PeerId" , field: "peerid",  cellClass: "cell", headerClass: "cell" },
+	    { headerName: "StreamId", field: "streamid",  cellClass: "cell", headerClass: "cell" },
+	    { headerName: "Size", field: "size",  cellClass: "cell", headerClass: "cell" },
+	    { headerName: "Ice State", field: "ice_state",  cellClass: "cell", headerClass: "cell" },
+	    { headerName: "Nb Candidates", field: "nbCandidates",  cellClass: "cell", headerClass: "cell" },		
+	    { headerName: "PC State", field: "pc_state",  cellClass: "cell", headerClass: "cell" },
+	    { headerName: "Action" , field: "action", cellClass: "cell", headerClass: "cell", 
 	      cellRenderer: function(params) { 
-	        var eDiv = document.createElement('div');
-	        var eButton = document.createElement('button');
-		eButton.innerHTML = params.value;
-		eDiv.appendChild(eButton);
-		eButton.addEventListener('click', function() {
-			fetch( webrtcConfig.url + "/api/hangup?peerid=" + params.data.peerid )
-		});
+				const eDiv = document.createElement('div');
+				const eButton = document.createElement('button');
+				eButton.innerText = params.value;
+				eDiv.appendChild(eButton);
+				eButton.addEventListener('click', () => fetch( webrtcConfig.url + "/api/hangup?peerid=" + params.data.peerid ));
 
-		return eDiv;
-              } 
+				return eDiv;
+        	} 
 	    }
 	];
 
@@ -55,7 +57,7 @@ footer {
 		enableSorting: true,
 		enableColResize: true,
 		columnDefs: columnDefs,
-		onGridReady: function($event) { $event.api.sizeColumnsToFit(); }
+		onGridReady: function(event) { event.api.sizeColumnsToFit(); }
 	};
 	
 	// fill grid
@@ -68,11 +70,11 @@ footer {
 	
 		var rowData = [];
 		peerConnectionList.forEach(function(item) {
-			var peerConnection = Object.values(item)[0];
+			const peerConnection = Object.values(item)[0];
 			
-			var streamid = "";
-			var frameHeight = 0;
-			var frameWidth = 0;
+			let streamid = "";
+			let frameHeight = 0;
+			let frameWidth = 0;
 			if (peerConnection && peerConnection.hasOwnProperty("streams")){
 				streamid = Object.keys(peerConnection.streams)[0];
 
@@ -87,7 +89,7 @@ footer {
 				});
 			}
 			
-			rowData.push({peerid: Object.keys(item)[0] , streamid, size:frameHeight+"x"+frameWidth, action:"hangup" })
+			rowData.push({peerid: Object.keys(item)[0] , streamid, size:frameHeight+"x"+frameWidth, action:"hangup", nbCandidates: Object.values(item)[0].candidateList.length, ... Object.values(item)[0] })
 		});
 		gridOptions.api.setRowData(rowData);		
 	}
