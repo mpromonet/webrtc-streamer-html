@@ -27,10 +27,11 @@
 		}
 		window.onbeforeunload = function() { this.webRtcServer.disconnect() }
 	} else {
+		let url = prompt("WebRTC stream name to connect:")
 		if (typeof URLSearchParams != 'undefined') {
-			alert("WebRTC stream name to connect is missing\n\nUsage :" + window.location + "?video=<WebRTC video stream name>&audio=<WebRTC audio stream name>&options=<WebRTC options>")
+			window.location += (window.location.search ? "&" : "?") + `video=${encodeURI(url)}`;
 		} else {
-			alert("WebRTC stream name to connect is missing\n\nUsage :" + window.location + "?<WebRTC video stream name>")
+			window.location += (window.location.search ? "&" : "?") + `${encodeURI(url)}`;
 		}
 	}
 </script>

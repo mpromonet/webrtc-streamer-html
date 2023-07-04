@@ -28,7 +28,8 @@
 				streamElement.setAttribute('url', JSON.stringify(url));
 				streamElement.style.display = "block"
 			} else {
-				messageElement.innerHTML = "url should contains video or audio"
+				let url = prompt("WebRTC stream name to connect:")
+				window.location += (window.location.search ? "&" : "?") + `video=${encodeURI(url)}`;
 			}
 		}).catch( (e) => {
 			messageElement.innerText = "webrtc-streamer webcomponent fails to initialize error:" + e

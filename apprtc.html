@@ -6,22 +6,16 @@
 	<input type="button" value="connect" onclick="connect()" />
 	<input type="button" value="disconnect" onclick="disconnect()" />
 </body>
-<script src="libs/request.min.js"></script>
 <script src="apprtc.json" ></script>
 <script>
-	function sendRequest(request,method,headers,data,onSuccess,onFailure,scope) {
+	function sendRequest(url,headers,data,onSuccess,onFailure,scope) {
 
-		console.log("HTTP call "+ method);
-		var verb = "GET";
+		console.log("HTTP call "+ url);
+		let params = {};
 		if (data) {
-			verb = "POST";
-			data = JSON.stringify(data);
+			params = { method: "POST", body: JSON.stringify(data)};
 		}
-		request(verb , method,
-			{	
-				body: data,
-				headers: headers
-			}).done( function (response) { 
+		fetch(url, {...params}).then( function (response) { 
 				if (response.statusCode === 200) {
 					if (onSuccess) {
 						onSuccess.call(scope,JSON.parse(response.body));
@@ -63,7 +57,7 @@
 				var msg = JSON.parse(messages[i]);
 				if (msg.type === "offer") {
 					var webrtcStream = document.querySelector('#rtcstream').value;
-					sendRequest(request, "/api/call?peerid="+ peerid+"&url="+encodeURIComponent(webrtcStream), null, msg, onCall, onError, this); 		
+					sendRequest("/api/call?peerid="+ peerid+"&url="+encodeURIComponent(webrtcStream), null, msg, onCall, onError, this); 		
 				}				
 			}			
 		}
@@ -84,7 +78,7 @@
 		
 		var url = serverName + "/message/" + roomName + "/" + clientid;
 		var body = { messages: candidates };
-		sendRequest(request, url, null, body, null , onError, this); 	
+		sendRequest(url, null, body, null , onError, this); 	
 	}
 	
 	function onCall(sdp) {
@@ -95,7 +89,7 @@
 
 		var body = { messages: [ sdp ] };
 		var url = serverName + "/message/" + roomName + "/" + clientid;
-		sendRequest(request, url, null, body, null , onError, this); 	
+		sendRequest(url, null, body, null , onError, this); 	
 
 
 		if (messages) {
@@ -103,11 +97,11 @@
 				var msg = JSON.parse(messages[i]);
 				if (msg.type === "candidate") {
 					var mymsg = { "sdpMid": msg.id, "sdpMLineIndex": msg.label, "candidate": msg.candidate };
-					sendRequest(request, "/api/addIceCandidate?peerid="+ peerid, null, mymsg, null, onError, this); 		
+					sendRequest("/api/addIceCandidate?peerid="+ peerid, null, mymsg, null, onError, this); 		
 				}				
 			}
 		}
-		sendRequest(request, "/api/getIceCandidate?peerid="+ peerid, null, null, onGetIceCandidate, onError, this); 		
+		sendRequest("/api/getIceCandidate?peerid="+ peerid, null, null, onGetIceCandidate, onError, this); 		
 	}
 	
 	
@@ -117,7 +111,7 @@
 
 		var body = { messages: [""] };
 		var url = serverName + "/join/" + roomName;
-		sendRequest(request, url, null, body, onJoin , onError, this); 	
+		sendRequest(url, null, body, onJoin , onError, this); 	
 	}
 	
 	function disconnect() {
@@ -126,7 +120,7 @@
 		if (clientid) {
 			var body = { messages: [] };
 			var url = serverName + "/leave/" + roomName + "/" + clientid;
-			sendRequest(request, url, null, body, null , onError, this); 
+			sendRequest(url, null, body, null , onError, this); 
 		}
 	}
 	
