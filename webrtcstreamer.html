@@ -6,8 +6,9 @@
 <script src="webrtcstreamer.js" ></script>
 <script>        
 	if (location.search.slice(1)) {
-		var url = { video:location.search.slice(1) };  
-		var options = webrtcConfig.options;
+		let url = { video:location.search.slice(1) };  
+		let options = webrtcConfig.options;
+		let codec = webrtcConfig.codec;
 		if (typeof URLSearchParams != 'undefined') {
 			var params = new URLSearchParams(location.search);
 			if (params.has("video") || params.has("audio")) {
@@ -16,11 +17,14 @@
 			if (params.has("options")) {
 				options = params.get("options");
 			}
+			if (params.has("codec")) {
+				codec = params.get("codec");
+			}
 		} 	    
 		window.onload         = function() {
 			this.webRtcServer = new WebRtcStreamer("video", webrtcConfig.url);
-			document.getElementById("title").innerHTML=url.video; 
-			webRtcServer.connect(url.video,url.audio,options);
+			document.getElementById("title").innerText = url.video; 
+			webRtcServer.connect(url.video, url.audio, options, undefined, codec);
 			fetch(webrtcConfig.url + "/api/version").then(r => r.text()).then( (response) => { 
 				document.getElementById("footer").innerHTML = "<p><a href='https://github.com/mpromonet/webrtc-streamer'>WebRTC-Streamer</a> " + response.split(" ")[0] + "</p>";			
 			});			

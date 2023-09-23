@@ -32,10 +32,11 @@ WebRtcStreamer.prototype._handleHttpErrors = function (response) {
  * Connect a WebRTC Stream to videoElement 
  * @param {string} videourl - id of WebRTC video stream
  * @param {string} audiourl - id of WebRTC audio stream
- * @param {string} options -  options of WebRTC call
- * @param {string} stream  -  local stream to send
+ * @param {string} options  -  options of WebRTC call
+ * @param {string} stream   -  local stream to send
+ * @param {string} prefmime -  prefered mime
 */
-WebRtcStreamer.prototype.connect = function(videourl, audiourl, options, localstream) {
+WebRtcStreamer.prototype.connect = function(videourl, audiourl, options, localstream, prefmime) {
 	this.disconnect();
 	
 	// getIceServers is not already received
@@ -45,11 +46,11 @@ WebRtcStreamer.prototype.connect = function(videourl, audiourl, options, localst
 		fetch(this.srvurl + "/api/getIceServers")
 			.then(this._handleHttpErrors)
 			.then( (response) => (response.json()) )
-			.then( (response) =>  this.onReceiveGetIceServers(response, videourl, audiourl, options, localstream))
+			.then( (response) =>  this.onReceiveGetIceServers(response, videourl, audiourl, options, localstream, prefmime))
 			.catch( (error) => this.onError("getIceServers " + error ))
 				
 	} else {
-		this.onReceiveGetIceServers(this.iceServers, videourl, audiourl, options, localstream);
+		this.onReceiveGetIceServers(this.iceServers, videourl, audiourl, options, localstream, prefmime);
 	}
 }
 
@@ -82,7 +83,7 @@ WebRtcStreamer.prototype.disconnect = function() {
 /*
 * GetIceServers callback
 */
-WebRtcStreamer.prototype.onReceiveGetIceServers = function(iceServers, videourl, audiourl, options, stream) {
+WebRtcStreamer.prototype.onReceiveGetIceServers = function(iceServers, videourl, audiourl, options, stream, prefmime) {
 	this.iceServers       = iceServers;
 	this.pcConfig         = iceServers || {"iceServers": [] };
 	try {            
@@ -106,6 +107,22 @@ WebRtcStreamer.prototype.onReceiveGetIceServers = function(iceServers, videourl,
 		// create Offer
 		this.pc.createOffer(this.mediaConstraints).then((sessionDescription) => {
 			console.log("Create offer:" + JSON.stringify(sessionDescription));
+
+			if (prefmime != undefined) {
+				//set prefered codec
+				let [prefkind] = prefmime.split('/');
+				let codecs = RTCRtpReceiver.getCapabilities(prefkind).codecs;
+				console.log(`codecs:${JSON.stringify(codecs)}`)
+				let preferedCodecs = codecs.filter(codec => codec.mimeType === prefmime);
+
+				console.log(`preferedCodecs:${JSON.stringify(preferedCodecs)}`);
+				this.pc.getTransceivers().filter(transceiver => transceiver.receiver.track.kind === prefkind).forEach(tcvr => {
+					if(tcvr.setCodecPreferences != undefined) {
+						tcvr.setCodecPreferences(preferedCodecs);
+					}
+				});
+			}
+		
 			
 			this.pc.setLocalDescription(sessionDescription)
 				.then(() => {
@@ -146,7 +163,7 @@ WebRtcStreamer.prototype.createPeerConnection = function() {
 	console.log("createPeerConnection  config: " + JSON.stringify(this.pcConfig));
 	this.pc = new RTCPeerConnection(this.pcConfig);
 	var pc = this.pc;
-	pc.peerid = Math.random();		
+	pc.peerid = Math.random();			
 	
 	pc.onicecandidate = (evt) => this.onIceCandidate(evt);
 	pc.onaddstream    = (evt) => this.onAddStream(evt);
