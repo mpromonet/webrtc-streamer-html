@@ -30,6 +30,11 @@ div {
     text-align: center; 
 }
 
+#video {
+    width: auto;
+    height: 100%;    
+}
+
 video {
     margin: auto;
     left: 0;
