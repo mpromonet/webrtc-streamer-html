@@ -75,7 +75,7 @@
 			let streamid = "";
 			let frameHeight = 0;
 			let frameWidth = 0;
-			if (peerConnection && peerConnection.hasOwnProperty("streams")){
+			if (peerConnection && peerConnection.hasOwnProperty("streams") && peerConnection.streams){
 				streamid = Object.keys(peerConnection.streams)[0];
 
 				var stream = Object.values(peerConnection.streams)[0];
