@@ -108,12 +108,14 @@ WebRtcStreamer.prototype.onReceiveGetIceServers = function(iceServers, videourl,
 		this.pc.createOffer(this.mediaConstraints).then((sessionDescription) => {
 			console.log("Create offer:" + JSON.stringify(sessionDescription));
 
+			console.log(`video codecs:${JSON.stringify(RTCRtpReceiver.getCapabilities("video").codecs.map(codec => codec.mimeType))}`)
+			console.log(`audio codecs:${JSON.stringify(RTCRtpReceiver.getCapabilities("audio").codecs.map(codec => codec.mimeType))}`)
+
 			if (prefmime != undefined) {
 				//set prefered codec
-				let [prefkind] = prefmime.split('/');
-				let codecs = RTCRtpReceiver.getCapabilities(prefkind).codecs;
-				console.log(`codecs:${JSON.stringify(codecs)}`)
-				let preferedCodecs = codecs.filter(codec => codec.mimeType === prefmime);
+				const [prefkind] = prefmime.split('/');
+				const codecs = RTCRtpReceiver.getCapabilities(prefkind).codecs;
+				const preferedCodecs = codecs.filter(codec => codec.mimeType === prefmime);
 
 				console.log(`preferedCodecs:${JSON.stringify(preferedCodecs)}`);
 				this.pc.getTransceivers().filter(transceiver => transceiver.receiver.track.kind === prefkind).forEach(tcvr => {
@@ -193,17 +195,6 @@ WebRtcStreamer.prototype.createPeerConnection = function() {
 		evt.channel.onmessage = function (event) {
 			console.log("remote datachannel recv:"+JSON.stringify(event.data));
 		}
-	}
-	pc.onicegatheringstatechange = function() {
-		if (pc.iceGatheringState === "complete") {
-			const recvs = pc.getReceivers();
-		
-			recvs.forEach((recv) => {
-			  if (recv.track && recv.track.kind === "video") {
-				console.log("codecs:" + JSON.stringify(recv.getParameters().codecs))
-			  }
-			});
-		  }
 	}
 
 	try {
