@@ -102,10 +102,12 @@ class WebRTCStreamerElement extends HTMLElement {
 			Promise.all([imgLoaded, modelLoaded]).then(([event,model]) => {	
 				this.setVideoSize(this.videoElement.videoWidth, this.videoElement.videoHeight)
 
-				model.run = this.getModelRunFunction(algo);
-				if (model.run) {
-					model.run(model, this.videoElement, this.canvasElement)
-					modelLoaded.model = model;
+				if (model) {
+					model.run = this.getModelRunFunction(algo);
+					if (model.run) {
+						model.run(model, this.videoElement, this.canvasElement)
+						modelLoaded.model = model;
+					}
 				}
 			});			
 		}
