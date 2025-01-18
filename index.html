@@ -10,21 +10,23 @@
 	// ------------------------------------------
 	// WebRTC connections
 	// ------------------------------------------	
-	var webRtcServerList = {};
+	let webRtcServerList = {};
 
 	// ------------------------------------------
 	// decode URL arguments
 	// ------------------------------------------	
-	var argurl = { video:location.search.slice(1) };
-	var argoptions = null;
-	var layout = null;
+	let argurl = { video:location.search.slice(1) };
+	let argoptions = null;
+	let prefmime = null;
+	let layout = null;
 	if (typeof URLSearchParams != 'undefined') {
-		var params = new URLSearchParams(location.search);
+		let params = new URLSearchParams(location.search);
 		argurl = { video:params.get("video"), audio:params.get("audio") };
 		argoptions = params.get("options");
 		if (!argoptions) {
 			argoptions = webrtcConfig.options; 
 		}
+		prefmime = params.get("codec");
 		layout = params.get("layout");
 	} else {
 		console.log("URLSearchParams not supported then no argument could be used");
@@ -195,7 +197,7 @@
 				options += webrtcConfig.layoutextraoptions;
 			}
 
-			webRtcServer.connect(url.video, url.audio, options);
+			webRtcServer.connect(url.video, url.audio, options, null, prefmime);
 				
 			// highlight the navigation 
 			var navElt = 	document.getElementById ("nav_" + videoTag);

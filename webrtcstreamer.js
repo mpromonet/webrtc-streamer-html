@@ -80,6 +80,65 @@ WebRtcStreamer.prototype.disconnect = function() {
 	}
 }    
 
+WebRtcStreamer.prototype.filterPreferredCodec = function(sdp, prefmime) {
+    const lines = sdp.split('\n');
+    const [prefkind, prefcodec] = prefmime.toLowerCase().split('/');
+    let currentMediaType = null;
+    let sdpSections = [];
+    let currentSection = [];
+
+    // Group lines into sections
+    lines.forEach(line => {
+        if (line.startsWith('m=')) {
+            if (currentSection.length) {
+                sdpSections.push(currentSection);
+            }
+            currentSection = [line];
+        } else {
+            currentSection.push(line);
+        }
+    });
+    sdpSections.push(currentSection);
+
+    // Process each section
+    const processedSections = sdpSections.map(section => {
+        const firstLine = section[0];
+        if (!firstLine.startsWith('m=' + prefkind)) {
+            return section.join('\n');
+        }
+
+        // Get payload types for preferred codec
+        const rtpLines = section.filter(line => line.startsWith('a=rtpmap:'));
+        const preferredPayloads = rtpLines
+            .filter(line => line.toLowerCase().includes(prefcodec))
+            .map(line => line.split(':')[1].split(' ')[0]);
+
+        if (preferredPayloads.length === 0) {
+            return section.join('\n');
+        }
+
+        // Modify m= line to only include preferred payloads
+        const mLine = firstLine.split(' ');
+        const newMLine = [...mLine.slice(0,3), ...preferredPayloads].join(' ');
+
+        // Filter related attributes
+        const filteredLines = section.filter(line => {
+            if (line === firstLine) return false;
+            if (line.startsWith('a=rtpmap:')) {
+                return preferredPayloads.some(payload => line.startsWith(`a=rtpmap:${payload}`));
+            }
+            if (line.startsWith('a=fmtp:') || line.startsWith('a=rtcp-fb:')) {
+                return preferredPayloads.some(payload => line.startsWith(`a=${line.split(':')[0].split('a=')[1]}:${payload}`));
+            }
+            return true;
+        });
+
+        return [newMLine, ...filteredLines].join('\n');
+    });
+
+    return processedSections.join('\n');
+}
+
 /*
 * GetIceServers callback
 */
@@ -89,7 +148,7 @@ WebRtcStreamer.prototype.onReceiveGetIceServers = function(iceServers, videourl,
 	try {            
 		this.createPeerConnection();
 
-		var callurl = this.srvurl + "/api/call?peerid=" + this.pc.peerid + "&url=" + encodeURIComponent(videourl);
+		let callurl = this.srvurl + "/api/call?peerid=" + this.pc.peerid + "&url=" + encodeURIComponent(videourl);
 		if (audiourl) {
 			callurl += "&audiourl="+encodeURIComponent(audiourl);
 		}
@@ -102,29 +161,27 @@ WebRtcStreamer.prototype.onReceiveGetIceServers = function(iceServers, videourl,
 		}
 
                 // clear early candidates
-		this.earlyCandidates.length = 0;
-		
+		this.earlyCandidates.length = 0;	
+	
 		// create Offer
 		this.pc.createOffer(this.mediaConstraints).then((sessionDescription) => {
 			console.log("Create offer:" + JSON.stringify(sessionDescription));
 
 			console.log(`video codecs:${Array.from(new Set(RTCRtpReceiver.getCapabilities("video")?.codecs?.map(codec => codec.mimeType)))}`)
 			console.log(`audio codecs:${Array.from(new Set(RTCRtpReceiver.getCapabilities("audio")?.codecs?.map(codec => codec.mimeType)))}`)
-
+	
 			if (prefmime != undefined) {
 				//set prefered codec
-				const [prefkind] = prefmime.split('/');
-				const codecs = RTCRtpReceiver.getCapabilities(prefkind).codecs;
-				const preferedCodecs = codecs.filter(codec => codec.mimeType === prefmime);
-
-				console.log(`preferedCodecs:${JSON.stringify(preferedCodecs)}`);
-				this.pc.getTransceivers().filter(transceiver => transceiver.receiver.track.kind === prefkind).forEach(tcvr => {
-					if(tcvr.setCodecPreferences != undefined) {
-						tcvr.setCodecPreferences(preferedCodecs);
-					}
-				});
+				let [prefkind] = prefmime.split('/');
+				if (prefkind != "video" && prefkind != "audio") {
+					prefkind = "video";
+					prefmime = prefkind + "/" + prefmime;
+				}
+				console.log("sdp:" + sessionDescription.sdp);
+				sessionDescription.sdp = this.filterPreferredCodec(sessionDescription.sdp, prefmime);
+				console.log("sdp:" + sessionDescription.sdp);
 			}
-		
+	
 			
 			this.pc.setLocalDescription(sessionDescription)
 				.then(() => {
@@ -164,7 +221,7 @@ WebRtcStreamer.prototype.getIceCandidate = function() {
 WebRtcStreamer.prototype.createPeerConnection = function() {
 	console.log("createPeerConnection  config: " + JSON.stringify(this.pcConfig));
 	this.pc = new RTCPeerConnection(this.pcConfig);
-	var pc = this.pc;
+	let pc = this.pc;
 	pc.peerid = Math.random();			
 	
 	pc.onicecandidate = (evt) => this.onIceCandidate(evt);
@@ -198,7 +255,7 @@ WebRtcStreamer.prototype.createPeerConnection = function() {
 	}
 
 	try {
-		var dataChannel = pc.createDataChannel("ClientDataChannel");
+		let dataChannel = pc.createDataChannel("ClientDataChannel");
 		dataChannel.onopen = function() {
 			console.log("local datachannel open");
 			this.send("local channel openned");
@@ -247,7 +304,7 @@ WebRtcStreamer.prototype.onAddStream = function(event) {
 	console.log("Remote track added:" +  JSON.stringify(event));
 	
 	this.videoElement.srcObject = event.stream;
-	var promise = this.videoElement.play();
+	let promise = this.videoElement.play();
 	if (promise !== undefined) {
 	  promise.catch((error) => {
 		console.warn("error:"+error);
@@ -262,11 +319,11 @@ WebRtcStreamer.prototype.onAddStream = function(event) {
 WebRtcStreamer.prototype.onReceiveCall = function(dataJson) {
 
 	console.log("offer: " + JSON.stringify(dataJson));
-	var descr = new RTCSessionDescription(dataJson);
+	let descr = new RTCSessionDescription(dataJson);
 	this.pc.setRemoteDescription(descr).then(() =>  { 
 			console.log ("setRemoteDescription ok");
 			while (this.earlyCandidates.length) {
-				var candidate = this.earlyCandidates.shift();
+				let candidate = this.earlyCandidates.shift();
 				this.addIceCandidate(this.pc.peerid, candidate);				
 			}
 		
@@ -283,8 +340,8 @@ WebRtcStreamer.prototype.onReceiveCall = function(dataJson) {
 WebRtcStreamer.prototype.onReceiveCandidate = function(dataJson) {
 	console.log("candidate: " + JSON.stringify(dataJson));
 	if (dataJson) {
-		for (var i=0; i<dataJson.length; i++) {
-			var candidate = new RTCIceCandidate(dataJson[i]);
+		for (let i=0; i<dataJson.length; i++) {
+			let candidate = new RTCIceCandidate(dataJson[i]);
 			
 			console.log("Adding ICE candidate :" + JSON.stringify(candidate) );
 			this.pc.addIceCandidate(candidate).then( () =>      { console.log ("addIceCandidate OK"); }
