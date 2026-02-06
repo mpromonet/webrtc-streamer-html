@@ -18,8 +18,6 @@ html,body{
     color:#ddd;
 }
 
-/* ===== Layout ===== */
-
 #container{
     height:100%;
     display:flex;
@@ -47,8 +45,6 @@ header{
 .warn{color:#ffd94d}
 .bad{color:#ff8080}
 
-/* ===== Responsive video (auto fit screen) ===== */
-
 #content{
     flex:1;
     display:flex;
@@ -58,7 +54,7 @@ header{
 video{
     width:100%;
     height:100%;
-    object-fit:contain;   /* keep aspect ratio */
+    object-fit:contain;
     background:black;
 }
 
@@ -78,7 +74,6 @@ button{
 }
 </style>
 </head>
-
 
 <body>
 <div id="container">
@@ -105,15 +100,10 @@ button{
 
 </div>
 
-
-
 <script>
 /* =====================================================
    Parse query parameters
-   Example:
-   ?video=test&audio=mic
 ===================================================== */
-
 let url = { video:null, audio:null };
 let options = webrtcConfig.options;
 let codec   = webrtcConfig.codec;
@@ -127,11 +117,9 @@ if(location.search){
     location.search = "video=" + encodeURIComponent(name);
 }
 
-
 /* =====================================================
    DOM references
 ===================================================== */
-
 const video   = document.getElementById("video");
 const stateEl = document.getElementById("state");
 const brEl    = document.getElementById("bitrate");
@@ -141,23 +129,18 @@ const lossEl  = document.getElementById("loss");
 let webRtcServer = null;
 let reconnecting = false;
 
-
 /* =====================================================
    UI helpers
 ===================================================== */
-
 function setState(text, cls){
     stateEl.textContent = text;
     stateEl.className = "stat " + cls;
 }
 
-
 /* =====================================================
    Connection management
 ===================================================== */
-
 function connectStream(){
-
     setState("connecting","warn");
 
     webRtcServer = new WebRtcStreamer("video", webrtcConfig.url);
@@ -181,7 +164,6 @@ function disconnectStream(){
 }
 
 function reconnect(){
-
     if(reconnecting) return;
     reconnecting = true;
 
@@ -199,17 +181,12 @@ function manualReconnect(){
     reconnect();
 }
 
-
 /* =====================================================
    Peer monitoring
-   Reconnect ONLY when state == failed
-   Prevent infinite reconnect loops
+   Reconnect on ICE failure
 ===================================================== */
-
 function monitorPeer(){
-
     setInterval(()=>{
-
         if(!webRtcServer || !webRtcServer.pc) return;
 
         const pc = webRtcServer.pc;
@@ -227,80 +204,78 @@ function monitorPeer(){
     },2000);
 }
 
-
 /* =====================================================
-   WebRTC statistics (bitrate / RTT / packet loss)
-   Uses RTCPeerConnection.getStats()
+   WebRTC statistics & freeze detection
 ===================================================== */
-
 let lastBytes = 0;
 let lastTime  = Date.now();
+let lastFrameTime = Date.now();
 
 setInterval(async ()=>{
-
     if(!webRtcServer || !webRtcServer.pc) return;
 
     const stats = await webRtcServer.pc.getStats();
 
-    stats.forEach(r=>{
+    let frameUpdated = false;
 
-        /* inbound video bitrate */
-        if(r.type === "inbound-rtp" && r.kind === "video"){
+    stats.forEach(r=>{
+        // inbound video bitrate
+        if(r.type==="inbound-rtp" && r.kind==="video"){
+            if(r.framesDecoded!==undefined){
+                frameUpdated = true;
+                lastFrameTime = Date.now();
+            }
 
             const now = Date.now();
             const bytes = r.bytesReceived;
 
-            const bitrate =
-                8 * (bytes - lastBytes) / ((now - lastTime)/1000) / 1000;
+            const bitrate = 8*(bytes-lastBytes)/((now-lastTime)/1000)/1000;
 
             lastBytes = bytes;
             lastTime  = now;
 
             brEl.textContent = bitrate.toFixed(0);
 
-            if(r.packetsLost !== undefined && r.packetsReceived){
-                const loss =
-                    r.packetsLost /
-                    (r.packetsLost + r.packetsReceived) * 100;
-
+            if(r.packetsLost!==undefined && r.packetsReceived){
+                const loss = r.packetsLost/(r.packetsLost+r.packetsReceived)*100;
                 lossEl.textContent = loss.toFixed(1);
             }
         }
 
-        /* RTT */
-        if(r.type === "candidate-pair" && r.currentRoundTripTime){
-            rttEl.textContent =
-                (r.currentRoundTripTime * 1000).toFixed(0);
+        // RTT
+        if(r.type==="candidate-pair" && r.currentRoundTripTime){
+            rttEl.textContent = (r.currentRoundTripTime*1000).toFixed(0);
         }
-
     });
 
-},1000);
+    // If no new frames for 8 seconds → reconnect
+    if(Date.now()-lastFrameTime>8000){
+        console.warn("Video frozen → reconnecting");
+        reconnect();
+        lastFrameTime = Date.now();
+    }
 
+},1000);
 
 /* =====================================================
    Video events (informational only)
 ===================================================== */
-
 video.onplaying = ()=>setState("playing","ok");
 video.onwaiting = ()=>setState("buffering","warn");
-
 
 /* =====================================================
    Lifecycle
 ===================================================== */
-
 window.onload = function(){
-
     document.getElementById("title").innerText = url.video;
 
     connectStream();
 
-    fetch(webrtcConfig.url + "/api/version")
+    fetch(webrtcConfig.url+"/api/version")
     .then(r=>r.text())
     .then(t=>{
         document.getElementById("footer").innerHTML =
-            "<a href='https://github.com/mpromonet/webrtc-streamer' target='_blank'>" +
+            "<a href='https://github.com/mpromonet/webrtc-streamer' target='_blank'>"+
             "WebRTC-Streamer</a> " + t.split(" ")[0];
     });
 };
