@@ -1,55 +1,312 @@
+<!DOCTYPE html>
 <html>
 <head>
-<link rel="stylesheet" type="text/css" href="styles.css">
-<script src="libs/adapter.min.js" ></script>
-<script src="webrtcconfig.js" ></script>
-<script src="webrtcstreamer.js" ></script>
-<script>        
-	if (location.search.slice(1)) {
-		let url = { video:location.search.slice(1) };  
-		let options = webrtcConfig.options;
-		let codec = webrtcConfig.codec;
-		if (typeof URLSearchParams != 'undefined') {
-			var params = new URLSearchParams(location.search);
-			if (params.has("video") || params.has("audio")) {
-				url = { video:params.get("video"), audio:params.get("audio") };
-			}
-			if (params.has("options")) {
-				options = params.get("options");
-			}
-			if (params.has("codec")) {
-				codec = params.get("codec");
-			}
-		} 	    
-		window.onload         = function() {
-			this.webRtcServer = new WebRtcStreamer("video", webrtcConfig.url);
-			document.getElementById("title").innerText = url.video; 
-			webRtcServer.connect(url.video, url.audio, options, undefined, codec);
-			fetch(webrtcConfig.url + "/api/version").then(r => r.text()).then( (response) => { 
-				document.getElementById("footer").innerHTML = "<p><a href='https://github.com/mpromonet/webrtc-streamer'>WebRTC-Streamer</a> " + response.split(" ")[0] + "</p>";			
-			});			
-		}
-		window.onbeforeunload = function() { this.webRtcServer.disconnect() }
-	} else {
-		let url = prompt("WebRTC stream name to connect:")
-		if (typeof URLSearchParams != 'undefined') {
-			window.location += (window.location.search ? "&" : "?") + `video=${encodeURI(url)}`;
-		} else {
-			window.location += (window.location.search ? "&" : "?") + `${encodeURI(url)}`;
-		}
-	}
-</script>
+<meta charset="utf-8" />
+<title>WebRTC Player</title>
+
+<link rel="stylesheet" href="styles.css">
+<script src="libs/adapter.min.js"></script>
+<script src="webrtcconfig.js"></script>
+<script src="webrtcstreamer.js"></script>
+
+<style>
+html,body{
+    margin:0;
+    height:100%;
+    background:#111;
+    font-family:monospace;
+    color:#ddd;
+}
+
+/* ===== Layout ===== */
+
+#container{
+    height:100%;
+    display:flex;
+    flex-direction:column;
+}
+
+header{
+    background:#1b1b1b;
+    padding:6px 12px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:13px;
+}
+
+#stats{
+    display:flex;
+    gap:14px;
+    align-items:center;
+}
+
+.stat{ opacity:.9; }
+
+.ok{color:#7CFC7C}
+.warn{color:#ffd94d}
+.bad{color:#ff8080}
+
+/* ===== Responsive video (auto fit screen) ===== */
+
+#content{
+    flex:1;
+    display:flex;
+    background:black;
+}
+
+video{
+    width:100%;
+    height:100%;
+    object-fit:contain;   /* keep aspect ratio */
+    background:black;
+}
+
+footer{
+    background:#1b1b1b;
+    padding:4px 10px;
+    font-size:12px;
+    text-align:center;
+}
+
+button{
+    background:#333;
+    color:#eee;
+    border:1px solid #444;
+    padding:4px 8px;
+    cursor:pointer;
+}
+</style>
 </head>
+
+
 <body>
-	<div id="container">
-		<header>
-			<h2 id="title"></h2>
-		</header>
-		<div id="content">
-		  <video id="video" muted playsinline controls></video>
-		</div>
-		<footer id="footer"></footer>	  
-	</div>	
+<div id="container">
+
+<header>
+    <div>
+        <b id="title">loading...</b>
+    </div>
+
+    <div id="stats">
+        <span id="state" class="stat warn">connecting</span>
+        <span class="stat">Bitrate: <b id="bitrate">0</b> kbps</span>
+        <span class="stat">RTT: <b id="rtt">0</b> ms</span>
+        <span class="stat">Loss: <b id="loss">0</b> %</span>
+        <button onclick="manualReconnect()">Reconnect</button>
+    </div>
+</header>
+
+<div id="content">
+    <video id="video" muted playsinline autoplay controls></video>
+</div>
+
+<footer id="footer"></footer>
+
+</div>
+
+
+
+<script>
+/* =====================================================
+   Parse query parameters
+   Example:
+   ?video=test&audio=mic
+===================================================== */
+
+let url = { video:null, audio:null };
+let options = webrtcConfig.options;
+let codec   = webrtcConfig.codec;
+
+if(location.search){
+    const p = new URLSearchParams(location.search);
+    url.video = p.get("video") || location.search.slice(1);
+    url.audio = p.get("audio");
+}else{
+    const name = prompt("Enter WebRTC stream name:");
+    location.search = "video=" + encodeURIComponent(name);
+}
+
+
+/* =====================================================
+   DOM references
+===================================================== */
+
+const video   = document.getElementById("video");
+const stateEl = document.getElementById("state");
+const brEl    = document.getElementById("bitrate");
+const rttEl   = document.getElementById("rtt");
+const lossEl  = document.getElementById("loss");
+
+let webRtcServer = null;
+let reconnecting = false;
+
+
+/* =====================================================
+   UI helpers
+===================================================== */
+
+function setState(text, cls){
+    stateEl.textContent = text;
+    stateEl.className = "stat " + cls;
+}
+
+
+/* =====================================================
+   Connection management
+===================================================== */
+
+function connectStream(){
+
+    setState("connecting","warn");
+
+    webRtcServer = new WebRtcStreamer("video", webrtcConfig.url);
+
+    webRtcServer.connect(
+        url.video,
+        url.audio,
+        options,
+        undefined,
+        codec
+    );
+
+    monitorPeer();
+}
+
+function disconnectStream(){
+    if(webRtcServer){
+        webRtcServer.disconnect();
+        webRtcServer = null;
+    }
+}
+
+function reconnect(){
+
+    if(reconnecting) return;
+    reconnecting = true;
+
+    setState("reconnecting","warn");
+
+    disconnectStream();
+
+    setTimeout(()=>{
+        connectStream();
+        reconnecting = false;
+    }, 1200);
+}
+
+function manualReconnect(){
+    reconnect();
+}
+
+
+/* =====================================================
+   Peer monitoring
+   Reconnect ONLY when state == failed
+   Prevent infinite reconnect loops
+===================================================== */
+
+function monitorPeer(){
+
+    setInterval(()=>{
+
+        if(!webRtcServer || !webRtcServer.pc) return;
+
+        const pc = webRtcServer.pc;
+
+        if(pc.connectionState === "connected"){
+            setState("connected","ok");
+        }
+
+        if(pc.connectionState === "failed" ||
+           pc.iceConnectionState === "failed"){
+            setState("failed","bad");
+            reconnect();
+        }
+
+    },2000);
+}
+
+
+/* =====================================================
+   WebRTC statistics (bitrate / RTT / packet loss)
+   Uses RTCPeerConnection.getStats()
+===================================================== */
+
+let lastBytes = 0;
+let lastTime  = Date.now();
+
+setInterval(async ()=>{
+
+    if(!webRtcServer || !webRtcServer.pc) return;
+
+    const stats = await webRtcServer.pc.getStats();
+
+    stats.forEach(r=>{
+
+        /* inbound video bitrate */
+        if(r.type === "inbound-rtp" && r.kind === "video"){
+
+            const now = Date.now();
+            const bytes = r.bytesReceived;
+
+            const bitrate =
+                8 * (bytes - lastBytes) / ((now - lastTime)/1000) / 1000;
+
+            lastBytes = bytes;
+            lastTime  = now;
+
+            brEl.textContent = bitrate.toFixed(0);
+
+            if(r.packetsLost !== undefined && r.packetsReceived){
+                const loss =
+                    r.packetsLost /
+                    (r.packetsLost + r.packetsReceived) * 100;
+
+                lossEl.textContent = loss.toFixed(1);
+            }
+        }
+
+        /* RTT */
+        if(r.type === "candidate-pair" && r.currentRoundTripTime){
+            rttEl.textContent =
+                (r.currentRoundTripTime * 1000).toFixed(0);
+        }
+
+    });
+
+},1000);
+
+
+/* =====================================================
+   Video events (informational only)
+===================================================== */
+
+video.onplaying = ()=>setState("playing","ok");
+video.onwaiting = ()=>setState("buffering","warn");
+
+
+/* =====================================================
+   Lifecycle
+===================================================== */
+
+window.onload = function(){
+
+    document.getElementById("title").innerText = url.video;
+
+    connectStream();
+
+    fetch(webrtcConfig.url + "/api/version")
+    .then(r=>r.text())
+    .then(t=>{
+        document.getElementById("footer").innerHTML =
+            "<a href='https://github.com/mpromonet/webrtc-streamer' target='_blank'>" +
+            "WebRTC-Streamer</a> " + t.split(" ")[0];
+    });
+};
+
+window.onbeforeunload = disconnectStream;
+
+</script>
 </body>
 </html>
-
