@@ -3,11 +3,6 @@
     <title>WebRTC Streamer using WHEP</title>
     <link rel="icon" type="image/png" href="webrtc.png" />
     <link rel="stylesheet" type="text/css" href="styles.css">
-    <style>
-        whep-video {
-            text-align: center;
-        }        
-    </style>
     <script type="module" src="webrtc-streamer-element.js"></script>
     <script type="module" src="webrtc-streamer-footer-element.js"></script>
     <script type="module" src="webrtc-streamer-menu-element.js"></script>
@@ -16,10 +11,12 @@
     <script src="./libs/whep-video.component.js"></script>
 </head>
 <body>
-  <webrtc-streamer-menu id="selector" ></webrtc-streamer-menu>  
-  <div id="content">
-  </div>  
-  <webrtc-streamer-footer></webrtc-streamer-footer>
+   <div id="container">
+    <webrtc-streamer-menu id="selector" class="header" ></webrtc-streamer-menu>  
+    <div id="content">
+    </div>  
+    <webrtc-streamer-footer id="footer"></webrtc-streamer-footer>
+   </div> 
   <script>
     customElements.whenDefined('webrtc-streamer-menu').then(() => {
         let selectorElement = document.getElementById("selector");

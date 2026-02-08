@@ -24,6 +24,7 @@ header {
     flex-grow: 1;
     overflow: auto;
     min-height: 2em;
+    align-content: center;
 }
 
 div {

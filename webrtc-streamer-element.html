@@ -18,11 +18,17 @@
     <script type="module" src="webrtc-streamer-algo-element.js"></script>
 </head>
 <body>
-    <webrtc-streamer-menu id="selector" ></webrtc-streamer-menu>
-    <webrtc-streamer-algo id="algo"></webrtc-streamer-algo>
-    <webrtc-streamer id="stream"></webrtc-streamer>
-    <webrtc-streamer-options id="options" options="rtptransport=tcp&timeout=60&width=0&height=0&bitrate=0&rotation=0" style="display:none"></webrtc-streamer-options>
-    <webrtc-streamer-footer></webrtc-streamer-footer>
+    <div id="container">
+        <div class="header">
+            <webrtc-streamer-menu id="selector" ></webrtc-streamer-menu>
+            <webrtc-streamer-algo id="algo"></webrtc-streamer-algo>
+        </div>
+        <div id="content">
+            <webrtc-streamer id="stream"></webrtc-streamer>
+            <webrtc-streamer-options id="options" options="rtptransport=tcp&timeout=60&width=0&height=0&bitrate=0&rotation=0" style="display:none"></webrtc-streamer-options>
+        </div>
+        <webrtc-streamer-footer id="footer"></webrtc-streamer-footer>
+    </div>
 
     <script>
         customElements.whenDefined('webrtc-streamer').then(() => {
